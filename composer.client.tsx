@@ -78,13 +78,13 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
     borderRadius: 5, backgroundColor: pressed || hovered === id ? theme.colors.surface2 : "transparent",
   });
   return <>
-    <View ref={anchor} collapsable={false} style={{ flexDirection: "row", alignItems: "center", gap: 6, maxWidth: Math.min(300, screen.width - 56) }}>
-      <View accessibilityRole="text" accessibilityLabel={`Be concise ${label.toLowerCase()}`}><BrandIcon theme={theme} size={16} monochrome color={color} /></View>
+    <View ref={anchor} collapsable={false} style={{ flexDirection: "row", alignItems: "center", height: 20, gap: 6, maxWidth: Math.min(300, screen.width - 56) }}>
+      <View accessibilityRole="text" accessibilityLabel={`Be concise ${label.toLowerCase()}`}><BrandIcon theme={theme} size={14} monochrome color={color} /></View>
       {ready && <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         {badgeCounts.map((item) => <View key={item.label} accessibilityRole="text" accessibilityLabel={`${item.count} ${item.label}`}
-          style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-          <Icon name={item.icon} size={10} color={decisionColor(theme, item.decision)} />
-          <Text style={{ color: decisionColor(theme, item.decision), fontSize: 12, fontVariant: ["tabular-nums"] }}>{item.count}</Text>
+          style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+          <Icon name={item.icon} size={12} color={decisionColor(theme, item.decision)} />
+          <Text style={{ color: decisionColor(theme, item.decision), fontSize: 12, fontWeight: "normal", fontVariant: ["tabular-nums"] }}>{item.count}</Text>
         </View>)}
       </View>}
     </View>
