@@ -83,7 +83,7 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
       {ready && <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         {badgeCounts.map((item) => <View key={item.label} accessibilityRole="text" accessibilityLabel={`${item.count} ${item.label}`}
           style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-          <Icon name={item.icon} size={12} color={decisionColor(theme, item.decision)} />
+          <Icon name={item.icon} size={10} color={decisionColor(theme, item.decision)} />
           <Text style={{ color: decisionColor(theme, item.decision), fontSize: 12, fontWeight: "normal", fontVariant: ["tabular-nums"] }}>{item.count}</Text>
         </View>)}
       </View>}
