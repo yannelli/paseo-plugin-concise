@@ -1,7 +1,7 @@
 {
   "name": "paseo-be-concise",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Live be-concise activity, configuration, and hook previews inside Paseo",
   "license": "MIT",
   "type": "module",
