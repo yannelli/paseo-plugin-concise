@@ -1,12 +1,17 @@
 {
   "name": "paseo-be-concise",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Live be-concise activity, configuration, and hook previews inside Paseo",
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=24" },
-  "repository": { "type": "git", "url": "git+https://github.com/yannelli/paseo-plugin-concise.git" },
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yannelli/paseo-plugin-concise.git"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test backend.test.mts test/*.test.mjs test/*.test.mts",
