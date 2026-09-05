@@ -119,7 +119,6 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
                 </View>)}
               </View>}
               {ready && <View style={{ gap: 3 }}>
-                <Label theme={theme} muted size={11}>Last 30 minutes</Label>
                 <View style={{ height: 48, flexDirection: "row", alignItems: "flex-end", gap: 2, borderBottomWidth: 1, borderColor: theme.colors.border }}>
                   {minutes.map((minute) => <View key={minute.timestamp} accessible accessibilityRole="image"
                     accessibilityLabel={`${new Date(minute.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}: ${minute.count} calls${minute.decisions.map(([decision, count]) => `, ${count} ${decision}`).join("")}`}
