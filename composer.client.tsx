@@ -80,12 +80,9 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
   return <>
     <View ref={anchor} collapsable={false} style={{ flexDirection: "row", alignItems: "center", gap: 6, maxWidth: Math.min(300, screen.width - 56) }}>
       <View accessibilityRole="text" accessibilityLabel={`Be concise ${label.toLowerCase()}`}><BrandIcon theme={theme} size={16} monochrome color={color} /></View>
-      {ready && <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: theme.colors.surface2, borderRadius: 5, paddingHorizontal: 4, paddingVertical: 2, gap: 6 }}>
-        {badgeCounts.map((item) => <View key={item.label} accessibilityRole="text" accessibilityLabel={`${item.count} ${item.label}`}
-          style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-          <Icon name={item.icon} size={10} color={decisionColor(theme, item.decision)} />
-          <Text style={{ color: theme.colors.foregroundMuted, fontSize: 10, fontVariant: ["tabular-nums"] }}>{item.count}</Text>
-        </View>)}
+      {ready && <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        {badgeCounts.map((item) => <Text key={item.label} accessibilityRole="text" accessibilityLabel={`${item.count} ${item.label}`}
+          style={{ color: decisionColor(theme, item.decision), fontSize: 12, fontVariant: ["tabular-nums"] }}>{item.count}</Text>)}
       </View>}
     </View>
     <Modal visible={open} transparent animationType="none" onRequestClose={() => setOpen(false)}>
