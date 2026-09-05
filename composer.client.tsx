@@ -37,11 +37,20 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
   const config = useQuery({ queryKey: ["concise", "configuration", cwd], queryFn: () => read({ cwd: cwd! }), enabled: Boolean(cwd), refetchInterval: 3000, retry: 1 });
   const bypassed = config.data?.effective.softFail === true;
   const failed = activity.isError || config.isError;
-  const latest = activity.data?.events[0];
   const ready = activity.data?.connected && Boolean(config.data) && !failed;
   const color = failed ? theme.colors.statusDanger : bypassed ? theme.colors.statusWarning : ready ? theme.colors.statusSuccess : theme.colors.foregroundMuted;
   const label = failed ? "Unavailable" : !ready ? "Connecting" : bypassed ? "Bypassed" : "Enabled";
   const counts = decisionGroups.map((group) => ({ ...group, count: (activity.data?.stats.decisions ?? []).reduce((sum, item) => sum + (group.names.includes(item.name) ? item.count : 0), 0) }));
+  const minutes = (activity.data?.stats.minutes ?? []).map((minute) => {
+    const start = Date.parse(minute.timestamp);
+    const decisions = new Map<string, number>();
+    for (const event of activity.data?.events ?? []) {
+      const timestamp = Date.parse(event.timestamp);
+      if (timestamp >= start && timestamp < start + 60_000) decisions.set(event.decision, (decisions.get(event.decision) ?? 0) + 1);
+    }
+    return { ...minute, decisions: [...decisions].sort(([a], [b]) => a.localeCompare(b)) };
+  });
+  const maximum = Math.max(1, ...minutes.map((minute) => minute.count));
   const otherCount = counts.slice(2).reduce((sum, item) => sum + item.count, 0);
   const badgeCounts = [...counts.slice(0, 2), ...(otherCount ? [{ label: "other decisions", count: otherCount, icon: "Ellipsis", decision: "flag" }] : [])];
   const mutation = useMutation({ mutationFn: async (enabled: boolean) => {
@@ -103,22 +112,27 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
             {bypassed && <View style={{ paddingHorizontal: 10, paddingBottom: 7 }}><Label theme={theme} muted size={11}>Flagged actions allowed. Filtering stays on.</Label></View>}
             <View style={{ marginVertical: 4, borderTopWidth: 1, borderColor: theme.colors.border }} />
             <View style={{ paddingHorizontal: 10, paddingVertical: 6, gap: 5 }}>
-              {activity.data && <Label theme={theme} muted size={11}>{activity.data.stats.total} calls · {activity.data.stats.interventions} interventions · {Math.round(activity.data.stats.averageMs)} ms</Label>}
               {ready && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {counts.filter((item, index) => index < 2 || item.count > 0).map((item) => <View key={item.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                   <Icon name={item.icon} size={11} color={decisionColor(theme, item.decision)} />
                   <Label theme={theme} muted size={11}>{item.count} {item.label}</Label>
                 </View>)}
               </View>}
-              {latest && <View style={{ gap: 3 }}>
-                <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
-                  <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: decisionColor(theme, latest.decision) }} />
-                  <Text numberOfLines={1} style={{ color: theme.colors.foreground, fontSize: 12, flex: 1 }}>{latest.hook}</Text>
-                  <Text style={{ color: decisionColor(theme, latest.decision), fontSize: 11 }}>{latest.decision}</Text>
+              {ready && <View style={{ gap: 3 }}>
+                <Label theme={theme} muted size={11}>Last 30 minutes</Label>
+                <View style={{ height: 48, flexDirection: "row", alignItems: "flex-end", gap: 2, borderBottomWidth: 1, borderColor: theme.colors.border }}>
+                  {minutes.map((minute) => <View key={minute.timestamp} accessible accessibilityRole="image"
+                    accessibilityLabel={`${new Date(minute.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}: ${minute.count} calls${minute.decisions.map(([decision, count]) => `, ${count} ${decision}`).join("")}`}
+                    style={{ flex: 1, height: 46, flexDirection: "column-reverse" }}>
+                    {minute.decisions.map(([decision, count]) => <View key={decision} style={{ height: 46 * count / maximum, backgroundColor: decisionColor(theme, decision) }} />)}
+                  </View>)}
                 </View>
-                <Text numberOfLines={1} style={{ color: theme.colors.foregroundMuted, fontSize: 11 }}>{latest.target || latest.tool}</Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Label theme={theme} muted size={10}>30 min ago</Label>
+                  <Label theme={theme} muted size={10}>Now</Label>
+                </View>
+                {!minutes.some((minute) => minute.count > 0) && <Label theme={theme} muted size={11}>No recent activity</Label>}
               </View>}
-              {!latest && ready && <Label theme={theme} muted size={12}>Waiting for activity</Label>}
               {(activity.error || config.error || mutation.error) && <Label theme={theme} size={12}>{activity.error?.message ?? config.error?.message ?? mutation.error?.message}</Label>}
               {activity.data?.message && <Label theme={theme} size={12}>{activity.data.message}</Label>}
               {!!notice && <Label theme={theme} size={12}>{notice}</Label>}
