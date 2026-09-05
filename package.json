@@ -1,0 +1,25 @@
+{
+  "name": "paseo-be-concise",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Live be-concise activity, configuration, and hook previews inside Paseo",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "repository": { "type": "git", "url": "git+https://github.com/yannelli/paseo-plugin-concise.git" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test backend.test.mts test/*.test.mjs test/*.test.mts",
+    "check": "npm run typecheck && npm test",
+    "release:dry-run": "node scripts/release.mjs --dry-run"
+  },
+  "devDependencies": {
+    "@getpaseo/plugin": "0.7.2",
+    "@tanstack/react-query": "^5.90.11",
+    "@types/react": "~19.2.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "typescript": "^5.9.3",
+    "zod": "^4.4.3"
+  }
+}
