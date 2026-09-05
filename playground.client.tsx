@@ -23,7 +23,7 @@ export function Playground({ cwd, theme, compact }: { cwd: string; theme: Plugin
   const matches = mutation.variables?.cwd === cwd;
   const changed = matches && (mutation.variables?.kind !== kind || mutation.variables?.text !== text || mutation.variables?.path !== path);
   return <View style={{ gap: compact ? 12 : 16 }}>
-    <View style={{ gap: 5 }}><Label theme={theme} size={compact ? 20 : 24}>Playground</Label><Label theme={theme} muted>Preview a hook response with this project’s current configuration.</Label></View>
+    <View style={{ gap: 5 }}><Label theme={theme} size={18}>Playground</Label><Label theme={theme} muted>Preview a hook response with this project’s current configuration.</Label></View>
     <Card theme={theme}>
       <Chips theme={theme} items={(["Write", "apply_patch", "Bash", "Stop"] as Kind[]).map((value) => ({ value, label: value }))} value={kind} onChange={(value) => { setKind(value as Kind); mutation.reset(); }} />
       {kind === "Write" && <Field theme={theme} label="Target path" value={path} onChange={setPath} placeholder="notes.md" />}

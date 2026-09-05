@@ -1,10 +1,10 @@
 import { type PluginSurfaceProps, type PluginWorkspacePanelProps, useRpc, useWorkspace } from "@getpaseo/plugin";
-import { Icon } from "@getpaseo/plugin/react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { snapshot } from "./contracts.shared";
 import { Activity } from "./activity.client";
+import { BrandIcon } from "./brand.client";
 import { ConfigurationEditor } from "./configuration.client";
 import { Playground } from "./playground.client";
 import { Button, Card, Chips, Label, Row } from "./ui.client";
@@ -26,7 +26,9 @@ function Dashboard({ theme, layout, cwd }: Props) {
   const [selected, setSelected] = useState(cwd ?? "");
   const [tab, setTab] = useState("activity");
   const [projectsOpen, setProjectsOpen] = useState(false);
+  const [width, setWidth] = useState<number | null>(null);
   const [paused, setPaused] = useState<Awaited<ReturnType<typeof fetchSnapshot>> | null>(null);
+  const compact = layout.compact || (width !== null && width < 560);
   const query = useQuery({ queryKey: ["concise", "snapshot", selected], queryFn: () => fetchSnapshot(selected ? { cwd: selected } : {}),
     refetchInterval: paused ? false : 2000, retry: 1 });
   const data = paused ?? query.data;
@@ -34,33 +36,31 @@ function Dashboard({ theme, layout, cwd }: Props) {
   const name = selected ? project?.name ?? selected.split("/").filter(Boolean).pop() : "All projects";
   const choose = (value: string) => { setSelected(value); setPaused(null); setProjectsOpen(false); };
 
-  return <ScrollView style={{ flex: 1, backgroundColor: theme.colors.surface0 }}
-    contentContainerStyle={{ padding: layout.compact ? 16 : 32, gap: 24, width: "100%", maxWidth: 1200, alignSelf: "center" }}>
-    <View style={{ gap: 18 }}>
+  return <ScrollView onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+    style={{ flex: 1, minWidth: 0, backgroundColor: theme.colors.surface0 }}
+    contentContainerStyle={{ padding: compact ? 10 : 16, gap: 14, width: "100%", maxWidth: 1040, alignSelf: "center" }}>
+    <View style={{ gap: 10, minWidth: 0 }}>
       <Row>
-        <View style={{ width: 38, height: 38, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.surface2, borderRadius: 11 }}>
-          <Icon name="ListFilter" size={21} color={theme.colors.accent} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.colors.foreground, fontSize: layout.compact ? 24 : 28, fontWeight: "600", letterSpacing: -0.8 }}>Be concise</Text>
-          <Label theme={theme} muted size={12}>A closer look at every hook.</Label>
+        <BrandIcon theme={theme} size={26} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={1} style={{ color: theme.colors.foreground, fontSize: 18, fontWeight: "600", letterSpacing: -0.3 }}>Be concise</Text>
         </View>
         <View accessibilityRole="text" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: query.isError ? theme.colors.statusDanger : paused ? theme.colors.statusWarning : data?.connected ? theme.colors.statusSuccess : theme.colors.foregroundMuted }} />
-          <Label theme={theme} muted size={12}>{query.isError ? "Disconnected" : paused ? "Paused" : data?.connected ? "Live · 2s" : "Connecting"}</Label>
+          <Label theme={theme} muted size={11}>{query.isError ? "Offline" : paused ? "Paused" : data?.connected ? "Live" : "Connecting"}</Label>
         </View>
       </Row>
-      <View style={{ flexDirection: layout.compact ? "column" : "row", gap: 12, justifyContent: "space-between" }}>
-        <Chips theme={theme} value={tab} onChange={setTab} items={[{ value: "activity", label: "Activity" }, { value: "configuration", label: "Configuration" }, { value: "playground", label: "Playground" }]} />
+      <View style={{ flexDirection: compact ? "column" : "row", flexWrap: "wrap", gap: 8, justifyContent: "space-between", minWidth: 0 }}>
+        <Chips theme={theme} value={tab} onChange={setTab} items={[{ value: "activity", label: "Activity" }, { value: "configuration", label: compact ? "Config" : "Configuration" }, { value: "playground", label: compact ? "Preview" : "Playground" }]} />
         {!cwd && <Button theme={theme} label={`${name} ${projectsOpen ? "−" : "+"}`} onPress={() => setProjectsOpen(!projectsOpen)} />}
-        {cwd && <Label theme={theme} muted>{name}</Label>}
+        {cwd && <Text numberOfLines={1} style={{ color: theme.colors.foregroundMuted, fontSize: 11, minWidth: 0, flexShrink: 1, alignSelf: compact ? "flex-start" : "center" }}>{name}</Text>}
       </View>
       {projectsOpen && <Card theme={theme}>
         {[{ cwd: "", key: "all", name: "All projects" }, ...(data?.projects ?? [])].map((item) => <Pressable key={item.key}
           accessibilityRole="button" accessibilityLabel={`Select ${item.name}`} onPress={() => choose(item.cwd)}
-          style={{ padding: 10, gap: 3, borderRadius: 8, backgroundColor: item.cwd === selected ? theme.colors.surface2 : theme.colors.surface1 }}>
+          style={{ padding: 8, gap: 2, borderRadius: 6, minWidth: 0, backgroundColor: item.cwd === selected ? theme.colors.surface2 : theme.colors.surface1 }}>
           <Label theme={theme}>{item.name}</Label>
-          {!!item.cwd && <Label theme={theme} muted size={11}>{item.cwd}</Label>}
+          {!!item.cwd && <Text numberOfLines={1} style={{ color: theme.colors.foregroundMuted, fontSize: 11 }}>{item.cwd}</Text>}
         </Pressable>)}
       </Card>}
     </View>
@@ -72,17 +72,17 @@ function Dashboard({ theme, layout, cwd }: Props) {
       <Button theme={theme} label="Check again" onPress={() => void query.refetch()} />
     </Card>}
     {data?.connected && <>
-      {tab === "activity" && <Activity key={selected} theme={theme} compact={layout.compact} events={data.events} stats={data.stats}
+      {tab === "activity" && <Activity key={selected} theme={theme} compact={compact} events={data.events} stats={data.stats}
         paused={Boolean(paused)} onPause={() => setPaused(paused ? null : data)} />}
       {tab !== "activity" && !selected && <Card theme={theme}>
         <Label theme={theme} size={18}>Choose a project</Label><Label theme={theme} muted>Configuration and previews use the selected project’s settings.</Label>
         <Button theme={theme} label="Choose project" onPress={() => setProjectsOpen(true)} />
       </Card>}
-      {tab === "configuration" && selected && <ConfigurationEditor key={selected} cwd={selected} theme={theme} compact={layout.compact} />}
-      {tab === "playground" && selected && <Playground key={selected} cwd={selected} theme={theme} compact={layout.compact} />}
-      <View style={{ borderTopWidth: 1, borderColor: theme.colors.border, paddingTop: 14, gap: 4 }}>
-        <Label theme={theme} muted size={11}>be-concise {data.version} · Last {data.retainedLimit} events per project · Updated {new Date(data.updatedAt).toLocaleTimeString()}</Label>
-        <Label theme={theme} muted size={11}>Activity follows saved hook records. Capture requires be-concise 0.7.0+ and monitor.persist enabled in each agent.</Label>
+      {tab === "configuration" && selected && <ConfigurationEditor key={selected} cwd={selected} theme={theme} compact={compact} />}
+      {tab === "playground" && selected && <Playground key={selected} cwd={selected} theme={theme} compact={compact} />}
+      <View style={{ borderTopWidth: 1, borderColor: theme.colors.border, paddingTop: 10, gap: 3 }}>
+        <Label theme={theme} muted size={11}>be-concise {data.version} · Updated {new Date(data.updatedAt).toLocaleTimeString()}</Label>
+        <Label theme={theme} muted size={11}>Last {data.retainedLimit} records per project · Requires monitor.persist in each agent.</Label>
       </View>
     </>}
   </ScrollView>;

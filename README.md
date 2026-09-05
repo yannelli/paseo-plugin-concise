@@ -1,9 +1,9 @@
 # Be concise for Paseo
 
-A native companion to [be-concise](https://github.com/yannelli/be-concise/tree/v0.7.0) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The **Concise** badge above the composer opens a quick preview with a workspace enforcement toggle.
+A native companion to [be-concise](https://github.com/yannelli/be-concise/tree/v0.7.0) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer badge shows enforcement status and decision counts. It opens a quick preview with a workspace enforcement toggle.
 
 - Live hook decisions, searchable by tool, file, session, project, and reason. Pause the feed or open an event’s request and response.
-- A composer badge with the latest decision, a popup with workspace stats, and an enforcement switch. Turning enforcement off sets the workspace's `softFail` override; flagged actions are allowed while hooks and test-output filtering remain active. Turn it on to restore enforcement. Agent environment overrides apply separately.
+- A composer badge with a monochrome icon, enforcement status, and decision counts; a compact popup with workspace stats and an enforcement switch. Turning enforcement off sets the workspace's `softFail` override; flagged actions are allowed while hooks and test-output filtering remain active. Turn it on to restore enforcement. Agent environment overrides apply separately.
 - Call counts, interventions, sessions, average hook duration, and a 30-minute activity chart.
 - User and project configuration with threshold controls, check switches, writing presets, an advanced JSON editor, and test filter settings.
 - An isolated playground for file writes, Codex patches, shell commands, and final replies. Previews inspect hook responses without executing the pasted command or writing the target file.
@@ -13,7 +13,7 @@ A native companion to [be-concise](https://github.com/yannelli/be-concise/tree/v
 Requires Paseo 0.7.2 and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. Paseo supplies all runtime dependencies.
 
 ```sh
-paseo plugin add yannelli/paseo-plugin-concise --ref v0.1.0
+paseo plugin add yannelli/paseo-plugin-concise
 paseo plugin ls
 ```
 

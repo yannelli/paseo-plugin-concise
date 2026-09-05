@@ -1,9 +1,9 @@
 import { type PluginTheme, useRpc } from "@getpaseo/plugin";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { Pressable, Switch, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { type ConfigLayer, readConfiguration, writeConfiguration } from "./contracts.shared";
-import { Button, Card, Chips, Field, Label, Row } from "./ui.client";
+import { Button, Card, Chips, Field, Label, Row, Toggle } from "./ui.client";
 
 type Props = { cwd: string; theme: PluginTheme; compact: boolean };
 type JsonObject = Record<string, unknown>;
@@ -101,31 +101,31 @@ export function ConfigurationEditor({ cwd, theme, compact }: Props) {
   }
   function toggle(path: string, label: string) {
     return <View key={path} style={{ gap: 4 }}>
-      <Row><View style={{ flex: 1 }}><Label theme={theme}>{label}</Label>{origin(path)}</View>
-        {inherit(path)}<Switch accessibilityLabel={label} value={(at(parsed.value, path) ?? at(effective, path)) === true} onValueChange={(value) => set(path, value)} trackColor={{ false: theme.colors.border, true: theme.colors.accent }} thumbColor={theme.colors.accentForeground} />
+      <Row><View style={{ flex: 1, minWidth: 0 }}><Label theme={theme}>{label}</Label>{origin(path)}</View>
+        {inherit(path)}<Toggle theme={theme} label={label} checked={(at(parsed.value, path) ?? at(effective, path)) === true} onChange={(value) => set(path, value)} />
       </Row>
     </View>;
   }
   function choice(path: string, label: string, values: string[]) {
     return <View style={{ gap: 8 }}>
-      <Row><View style={{ flex: 1 }}><Label theme={theme}>{label}</Label>{origin(path)}</View>{inherit(path)}</Row>
+      <Row><View style={{ flex: 1, minWidth: 0 }}><Label theme={theme}>{label}</Label>{origin(path)}</View>{inherit(path)}</Row>
       <Chips theme={theme} items={items(values)} value={String(at(parsed.value, path) ?? at(effective, path) ?? "")} onChange={(value) => set(path, value)} />
     </View>;
   }
   if (query.isPending) return <Label theme={theme} muted>Loading configuration…</Label>;
   if (!query.data) return <Card theme={theme}><Label theme={theme}>{query.error?.message ?? "Configuration is unavailable."}</Label><Button theme={theme} label="Retry" onPress={() => { void query.refetch(); }} /></Card>;
   return <View style={{ gap: compact ? 12 : 16 }}>
-    <View style={{ gap: 5 }}><Label theme={theme} size={compact ? 20 : 24}>Configuration</Label><Label theme={theme} muted>Select a file to edit its overrides. Save applies the selected file.</Label></View>
+    <View style={{ gap: 5 }}><Label theme={theme} size={18}>Configuration</Label><Label theme={theme} muted>Select a file to edit its overrides. Save applies the selected file.</Label></View>
     {query.isError && <Label theme={theme}>Refresh failed: {query.error.message}</Label>}
     <Card theme={theme}>
-      {layers.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: item.id === layer?.id }} accessibilityLabel={`Edit ${item.label}, ${item.active ? "active" : "inactive"}, ${item.exists ? "exists" : "new file"}`} onPress={() => setSelected(item.id)} style={{ padding: compact ? 10 : 12, borderRadius: 10, gap: 4, backgroundColor: item.id === layer?.id ? theme.colors.surface2 : "transparent", borderLeftWidth: 2, borderLeftColor: item.id === layer?.id ? theme.colors.accent : "transparent" }}>
-        <Row><View style={{ flex: 1 }}><Label theme={theme}>{item.label}{drafts[`${cwd}\0${item.id}`]?.text !== undefined && drafts[`${cwd}\0${item.id}`].text !== drafts[`${cwd}\0${item.id}`].original ? " · Unsaved" : ""}</Label></View><Label theme={theme} muted size={12}>{item.active ? "Active" : "Inactive"} · {item.exists ? "Exists" : "New file"}</Label></Row>
-        <Text selectable style={{ color: theme.colors.foregroundMuted, fontSize: 12 }}>{item.path}</Text>
+      {layers.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: item.id === layer?.id }} accessibilityLabel={`Edit ${item.label}, ${item.active ? "active" : "inactive"}, ${item.exists ? "exists" : "new file"}`} onPress={() => setSelected(item.id)} style={{ padding: 8, borderRadius: 6, gap: 4, backgroundColor: item.id === layer?.id ? theme.colors.surface2 : "transparent", borderWidth: 1, borderColor: item.id === layer?.id ? theme.colors.accent : "transparent" }}>
+        <Row><View style={{ flex: 1, minWidth: 0 }}><Label theme={theme}>{item.label}{drafts[`${cwd}\0${item.id}`]?.text !== undefined && drafts[`${cwd}\0${item.id}`].text !== drafts[`${cwd}\0${item.id}`].original ? " · Unsaved" : ""}</Label></View><Label theme={theme} muted size={12}>{item.active ? "Active" : "Inactive"} · {item.exists ? "Exists" : "New file"}</Label></Row>
+        <Text selectable numberOfLines={2} accessibilityLabel={item.path} style={{ color: theme.colors.foregroundMuted, fontSize: 11, minWidth: 0 }}>{item.path}</Text>
       </Pressable>)}
       <Button theme={theme} label={advanced ? "Hide advanced editor" : "Advanced editor & test filters"} onPress={() => setAdvanced((value) => !value)} />
     </Card>
     {layer && <Card theme={theme}>
-      <Row><View style={{ flex: 1 }}><Label theme={theme} size={17}>{layer.label}</Label><Label theme={theme} muted>{dirty ? "Unsaved changes" : "No unsaved changes"}</Label></View></Row>
+      <Row><View style={{ flex: 1, minWidth: 0 }}><Label theme={theme} size={17}>{layer.label}</Label><Label theme={theme} muted>{dirty ? "Unsaved changes" : "No unsaved changes"}</Label></View></Row>
       {!layer.active && <Label theme={theme} muted>{layer.exists ? "Another file takes precedence over this layer." : "This file does not exist yet. Creating it changes file selection according to layer precedence."}</Label>}
       {layer.error && <Label theme={theme}>{layer.error}</Label>}
       {externalChange && <Label theme={theme}>This file changed on disk. Your draft is preserved. Reload discards this draft and reads the current file.</Label>}
