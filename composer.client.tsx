@@ -38,7 +38,7 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
   const bypassed = config.data?.effective.softFail === true;
   const failed = activity.isError || config.isError;
   const ready = activity.data?.connected && Boolean(config.data) && !failed;
-  const color = failed ? theme.colors.statusDanger : bypassed ? theme.colors.statusWarning : ready ? theme.colors.statusSuccess : theme.colors.foregroundMuted;
+  const color = failed ? theme.colors.statusDanger : ready && !bypassed ? theme.colors.foreground : theme.colors.foregroundMuted;
   const label = failed ? "Unavailable" : !ready ? "Connecting" : bypassed ? "Bypassed" : "Enabled";
   const counts = decisionGroups.map((group) => ({ ...group, count: (activity.data?.stats.decisions ?? []).reduce((sum, item) => sum + (group.names.includes(item.name) ? item.count : 0), 0) }));
   const minutes = (activity.data?.stats.minutes ?? []).map((minute) => {
@@ -79,8 +79,7 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
   });
   return <>
     <View ref={anchor} collapsable={false} style={{ flexDirection: "row", alignItems: "center", gap: 6, maxWidth: Math.min(300, screen.width - 56) }}>
-      <BrandIcon theme={theme} size={16} monochrome />
-      <Text numberOfLines={1} style={{ color, fontSize: 12, flexShrink: 1 }}>{label}</Text>
+      <View accessibilityRole="text" accessibilityLabel={`Be concise ${label.toLowerCase()}`}><BrandIcon theme={theme} size={16} monochrome color={color} /></View>
       {ready && <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: theme.colors.surface2, borderRadius: 5, paddingHorizontal: 4, paddingVertical: 2, gap: 6 }}>
         {badgeCounts.map((item) => <View key={item.label} accessibilityRole="text" accessibilityLabel={`${item.count} ${item.label}`}
           style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
