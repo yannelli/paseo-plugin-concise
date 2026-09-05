@@ -98,17 +98,13 @@ function ConcisePill({ theme, workspaceId, agentId, controller }: PluginComposer
           <ScrollView style={{ maxHeight: menu.maxHeight }} onContentSizeChange={(_, height) => setContentHeight(height + 2)} contentContainerStyle={{ padding: 4 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 7 }}>
               <BrandIcon theme={theme} size={16} />
-              <Text style={{ color: theme.colors.foreground, fontSize: 12, fontWeight: "500" }}>Be concise</Text>
-              <Text numberOfLines={1} style={{ color: theme.colors.foregroundMuted, fontSize: 11, flex: 1, minWidth: 0, textAlign: "right" }}>{cwd?.split("/").filter(Boolean).pop()}</Text>
+              <Text style={{ color: theme.colors.foreground, fontSize: 12, fontWeight: "500", flex: 1 }}>Be concise</Text>
+              <Pressable accessibilityRole="switch" accessibilityLabel="Enable workspace enforcement" aria-checked={!bypassed} aria-disabled={disabled} accessibilityState={{ checked: !bypassed, disabled }}
+                disabled={disabled} onPress={(event) => { event.stopPropagation(); setNotice(""); mutation.mutate(bypassed); }}
+                style={{ opacity: disabled ? 0.5 : 1 }}>
+                <ToggleIndicator theme={theme} checked={!bypassed} />
+              </Pressable>
             </View>
-            <Pressable accessibilityRole="switch" accessibilityLabel="Enable workspace enforcement" aria-checked={!bypassed} aria-disabled={disabled} accessibilityState={{ checked: !bypassed, disabled }}
-              disabled={disabled} onPress={(event) => { event.stopPropagation(); setNotice(""); mutation.mutate(bypassed); }}
-              onHoverIn={() => setHovered("enforcement")} onHoverOut={() => setHovered("")}
-              style={({ pressed }) => [rowStyle("enforcement", pressed), { opacity: disabled ? 0.5 : 1 }]}>
-              <Text style={{ color: theme.colors.foreground, fontSize: 13, flex: 1 }}>Enforcement</Text>
-              <Text style={{ color: theme.colors.foregroundMuted, fontSize: 12 }}>{mutation.isPending ? "Saving…" : bypassed ? "Bypassed" : "On"}</Text>
-              <ToggleIndicator theme={theme} checked={!bypassed} />
-            </Pressable>
             {bypassed && <View style={{ paddingHorizontal: 10, paddingBottom: 7 }}><Label theme={theme} muted size={11}>Flagged actions allowed. Filtering stays on.</Label></View>}
             <View style={{ marginVertical: 4, borderTopWidth: 1, borderColor: theme.colors.border }} />
             <View style={{ paddingHorizontal: 10, paddingVertical: 6, gap: 5 }}>
