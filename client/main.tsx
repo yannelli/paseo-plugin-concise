@@ -1,13 +1,13 @@
-import { type PluginSurfaceProps, type PluginWorkspacePanelProps, useRpc, useWorkspace } from "@getpaseo/plugin";
+import { type PluginSurfaceProps, type PluginWorkspacePanelProps, useRpc, useWorkspace } from "@getpaseo/plugin/client";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { snapshot } from "./contracts.shared";
-import { Activity } from "./activity.client";
-import { BrandIcon } from "./brand.client";
-import { ConfigurationEditor } from "./configuration.client";
-import { Playground } from "./playground.client";
-import { Button, Card, Chips, Label, Row } from "./ui.client";
+import { snapshot } from "../shared/contracts";
+import { Activity } from "./activity";
+import { BrandIcon } from "./brand";
+import { ConfigurationEditor } from "./configuration";
+import { Playground } from "./playground";
+import { Button, Card, Chips, Label, Row } from "./ui";
 
 type Props = Pick<PluginSurfaceProps, "theme" | "layout"> & { cwd?: string };
 

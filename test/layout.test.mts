@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { popoverLayout } from "../layout.shared.ts";
+import { popoverLayout } from "../shared/layout.ts";
 
 test("popup sits immediately above its badge using its rendered height", () => {
   const menu = popoverLayout({ x: 250, y: 680, width: 110, height: 18 }, { width: 1280, height: 800 }, 194);

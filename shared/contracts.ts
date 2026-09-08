@@ -1,4 +1,4 @@
-import { defineRpc } from "@getpaseo/plugin/server";
+import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
 
 export const ObjectSchema = z.record(z.string(), z.unknown());
@@ -51,4 +51,3 @@ export const preview = defineRpc({
   input: TargetSchema.extend({ kind: z.enum(["Write", "apply_patch", "Bash", "Stop"]), text: z.string().max(65536), path: z.string().max(1024) }),
   output: z.object({ json: z.string() }),
 });
-export const serverCleanups = new Set<() => void | Promise<void>>();
