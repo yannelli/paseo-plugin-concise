@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { basename } from "node:path";
-import type { ActivityEvent, ActivityStats } from "./contracts.shared.ts";
+import type { ActivityEvent, ActivityStats } from "../shared/contracts.ts";
 
 export const RETAINED = 500;
 export const HISTORY_BYTES = 16 * 1024 * 1024;

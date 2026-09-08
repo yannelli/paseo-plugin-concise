@@ -1,3 +1,6 @@
 {
-  "id": "paseo-be-concise"
+  "id": "paseo-be-concise",
+  "requirements": {
+    "paseo": ">=0.8.0"
+  }
 }

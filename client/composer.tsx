@@ -1,13 +1,13 @@
-import { type PluginClientContext, type PluginComposerPillProps, useAgent, useRpc, useWorkspace } from "@getpaseo/plugin";
-import { Icon } from "@getpaseo/plugin/react-native";
+import { type PluginClientContext, type PluginComposerPillProps, useAgent, useRpc, useWorkspace } from "@getpaseo/plugin/client";
+import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
-import { readConfiguration, snapshot, writeConfiguration } from "./contracts.shared";
-import { enforcementUpdate } from "./enforcement.shared";
-import { popoverLayout } from "./layout.shared";
-import { BrandIcon } from "./brand.client";
-import { decisionColor, Label, ToggleIndicator } from "./ui.client";
+import { readConfiguration, snapshot, writeConfiguration } from "../shared/contracts";
+import { enforcementUpdate } from "../shared/enforcement";
+import { popoverLayout } from "../shared/layout";
+import { BrandIcon } from "./brand";
+import { decisionColor, Label, ToggleIndicator } from "./ui";
 
 type Controller = { open?: () => void; details: () => void };
 const decisionGroups = [

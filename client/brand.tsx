@@ -1,6 +1,6 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import { Image, View } from "react-native";
-import { brandIcon } from "./brand-icon.shared";
+import { brandIcon } from "../shared/brand-icon";
 
 export function BrandIcon({ theme, size = 20, monochrome = false, color = theme.colors.foreground }: { theme: PluginTheme; size?: number; monochrome?: boolean; color?: string }) {
   const imageSize = size * 256 / 180;

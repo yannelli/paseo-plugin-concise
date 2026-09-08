@@ -3,8 +3,8 @@ import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "n
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
-import { ActivityStore, activityStats, normalizeEvent } from "./activity.server.ts";
-import { createBackend, discoverInstallation, visibleEnvironment } from "./adapter.server.ts";
+import { ActivityStore, activityStats, normalizeEvent } from "./server/activity.ts";
+import { createBackend, discoverInstallation, visibleEnvironment } from "./server/adapter.ts";
 
 const record = (extra: Record<string, unknown> = {}) => ({
   cwd: "/project", hook: "check-edit", ts: "2026-09-05T10:30:00.000Z", decision: "allow",

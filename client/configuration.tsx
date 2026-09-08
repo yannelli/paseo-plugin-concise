@@ -1,9 +1,10 @@
-import { type PluginTheme, useRpc } from "@getpaseo/plugin";
+import type { PluginTheme } from "@getpaseo/plugin";
+import { useRpc } from "@getpaseo/plugin/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { type ConfigLayer, readConfiguration, writeConfiguration } from "./contracts.shared";
-import { Button, Card, Chips, Field, Label, Row, Toggle } from "./ui.client";
+import { type ConfigLayer, readConfiguration, writeConfiguration } from "../shared/contracts";
+import { Button, Card, Chips, Field, Label, Row, Toggle } from "./ui";
 
 type Props = { cwd: string; theme: PluginTheme; compact: boolean };
 type JsonObject = Record<string, unknown>;

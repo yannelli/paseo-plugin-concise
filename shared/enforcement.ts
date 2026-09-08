@@ -1,4 +1,4 @@
-import type { Configuration } from "./contracts.shared";
+import type { Configuration } from "./contracts";
 
 export function enforcementUpdate(state: Configuration, enabled: boolean, provider: string) {
   const active = state.layers.find((layer) => layer.active && layer.id.startsWith("project-"));

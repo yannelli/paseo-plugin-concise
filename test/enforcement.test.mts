@@ -3,9 +3,9 @@ import test from "node:test";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createBackend, discoverInstallation } from "../adapter.server.ts";
-import { enforcementUpdate } from "../enforcement.shared.ts";
-import type { Configuration } from "../contracts.shared.ts";
+import { createBackend, discoverInstallation } from "../server/adapter.ts";
+import { enforcementUpdate } from "../shared/enforcement.ts";
+import type { Configuration } from "../shared/contracts.ts";
 
 function state(): Configuration {
   return { defaults: {}, effective: {}, environment: {}, filterLayers: [], layers: [

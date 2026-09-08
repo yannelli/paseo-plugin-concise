@@ -1,9 +1,10 @@
-import { type PluginTheme, useRpc } from "@getpaseo/plugin";
+import type { PluginTheme } from "@getpaseo/plugin";
+import { useRpc } from "@getpaseo/plugin/client";
 import { useMutation } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { Text, View } from "react-native";
-import { preview } from "./contracts.shared";
-import { Button, Card, Chips, Field, Label } from "./ui.client";
+import { preview } from "../shared/contracts";
+import { Button, Card, Chips, Field, Label } from "./ui";
 
 type Kind = "Write" | "apply_patch" | "Bash" | "Stop";
 const labels: Record<Kind, string> = { Write: "File content", apply_patch: "Patch", Bash: "Command text", Stop: "Final reply" };

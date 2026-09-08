@@ -2,9 +2,8 @@ import { readFile, readdir, realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { ActivityStore, activityStats, RETAINED } from "./activity.server.ts";
-import { serverCleanups } from "./contracts.shared.ts";
-import type { Configuration } from "./contracts.shared.ts";
+import { ActivityStore, activityStats, RETAINED } from "./activity.ts";
+import type { Configuration } from "../shared/contracts.ts";
 
 type Environment = Record<string, string | undefined>;
 type Project = { key: string; name: string; cwd: string; lastSeen: string };
@@ -181,7 +180,3 @@ export function createBackend(env: Environment = process.env) {
 
   return { getSnapshot, getEventDetail, getConfiguration, saveConfiguration, runPreview, close };
 }
-
-const backend = createBackend();
-serverCleanups.add(backend.close);
-export const { getSnapshot, getEventDetail, getConfiguration, saveConfiguration, runPreview } = backend;

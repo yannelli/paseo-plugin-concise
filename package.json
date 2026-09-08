@@ -19,7 +19,7 @@
     "release:dry-run": "node scripts/release.mjs --dry-run"
   },
   "devDependencies": {
-    "@getpaseo/plugin": "0.7.2",
+    "@getpaseo/plugin": "0.8.0-beta.1",
     "@tanstack/react-query": "^5.90.11",
     "@types/react": "~19.2.0",
     "react": "19.1.0",

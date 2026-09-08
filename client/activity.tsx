@@ -1,10 +1,11 @@
-import { type PluginTheme, useRpc } from "@getpaseo/plugin";
-import { Icon } from "@getpaseo/plugin/react-native";
+import type { PluginTheme } from "@getpaseo/plugin";
+import { useRpc } from "@getpaseo/plugin/client";
+import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { type ActivityEvent, type ActivityStats, eventDetail } from "./contracts.shared";
-import { Button, Card, decisionColor, Label, Row } from "./ui.client";
+import { type ActivityEvent, type ActivityStats, eventDetail } from "../shared/contracts";
+import { Button, Card, decisionColor, Label, Row } from "./ui";
 
 const filters = [
   { value: "all", label: "All decisions" }, { value: "attention", label: "Needs attention" }, { value: "allow", label: "Allowed" },
