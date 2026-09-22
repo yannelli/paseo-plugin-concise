@@ -131,14 +131,21 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
 }
 
 export function contributeComposer(client: PluginClientContext) {
-  type Pill = { workspaceId: string; registration: PluginButtonRegistration; timer: ReturnType<typeof setInterval> };
+  type Pill = { workspaceId: string; registration: PluginButtonRegistration };
+  type Poll = { registrations: Set<PluginButtonRegistration>; label: string; timer: ReturnType<typeof setInterval>; pending: boolean };
+  const polls = new Map<string, Poll>();
   const pills = new Map<string, Pill>();
   const observed = new Set<string>();
   let disposed = false;
   function detach(id: string) {
     const pill = pills.get(id);
     if (!pill) return;
-    clearInterval(pill.timer);
+    const poll = polls.get(pill.workspaceId);
+    poll?.registrations.delete(pill.registration);
+    if (poll && poll.registrations.size === 0) {
+      clearInterval(poll.timer);
+      polls.delete(pill.workspaceId);
+    }
     pill.registration.remove();
     pills.delete(id);
   }
@@ -150,29 +157,40 @@ export function contributeComposer(client: PluginClientContext) {
     detach(agent.id);
     const workspaceId = agent.workspaceId;
     const agentId = agent.id;
-    const workspace = client.paseo.workspaces.ref(workspaceId);
     const registration = client.addComposerPill({
       id: PILL_ID, workspaceId, agentId,
       button: {
-        title: PILL_TITLE, label: "Connecting", icon: ConciseIcon,
+        title: PILL_TITLE, label: polls.get(workspaceId)?.label ?? "Connecting", icon: ConciseIcon,
         behavior: { kind: "popover", Content: (props) => <ConciseContent {...props} onOpenDetails={() => { props.close(); client.openPanel("workspace", { workspaceId }); }} /> },
       },
     });
+    pills.set(agentId, { workspaceId, registration });
+    const existing = polls.get(workspaceId);
+    if (existing) { existing.registrations.add(registration); return; }
+    const workspace = client.paseo.workspaces.ref(workspaceId);
     const timer = setInterval(() => void refresh(), POLL_MS);
-    const pill: Pill = { workspaceId, registration, timer };
-    pills.set(agentId, pill);
-    const live = () => !disposed && pills.get(agentId) === pill;
+    const poll: Poll = { registrations: new Set([registration]), label: "Connecting", timer, pending: false };
+    polls.set(workspaceId, poll);
+    const live = () => !disposed && polls.get(workspaceId) === poll;
+    function update(label: string) {
+      if (!live()) return;
+      poll.label = label;
+      for (const item of poll.registrations) item.update({ label });
+    }
     async function refresh() {
-      const cwd = workspace.directory;
-      if (!cwd || !live()) return;
+      if (!live() || poll.pending) return;
+      poll.pending = true;
       try {
+        const cwd = workspace.directory;
+        if (!cwd) { update("Connecting"); return; }
         const [snap, config] = await Promise.all([client.rpc(snapshot, { cwd }), client.rpc(readConfiguration, { cwd })]);
-        if (!live()) return;
         const bypassed = config.effective.softFail === true;
         const flagged = snap.stats.decisions.reduce((sum, item) => sum + (["ask", "flag"].includes(item.name) ? item.count : 0), 0);
-        registration.update({ label: statusLabel(snap.connected, bypassed, flagged) });
+        update(statusLabel(snap.connected, bypassed, flagged));
       } catch {
-        if (live()) registration.update({ label: "Unavailable" });
+        update("Unavailable");
+      } finally {
+        poll.pending = false;
       }
     }
     void refresh();
