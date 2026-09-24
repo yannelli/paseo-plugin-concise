@@ -1,0 +1,16 @@
+{
+  "metadataGeneration": {
+    "title": {
+      "instructions": "Use 3 to 5 words that name the change. No leading verb, no trailing period."
+    },
+    "branchName": {
+      "instructions": "Use <type>/<name>. <type> is one Conventional Commits type: feat, fix, perf, refactor, docs, test, build, ci, chore, or revert. <name> is 3 to 5 lowercase kebab-case words that name the change, for example fix/composer-popover-padding or feat/openrouter-api-support."
+    },
+    "commitMessage": {
+      "instructions": "Follow Conventional Commits 1.0.0: <type>(<optional scope>): <summary>. Types: feat, fix, perf, refactor, docs, test, build, ci, chore, revert. The release script maps feat to a minor bump; fix, perf, and revert to a patch bump; and a ! after the type or scope, or a BREAKING CHANGE: footer, to a major bump. Use a scope for the area changed, such as composer, server, config, or release. Write the summary in the imperative mood, lowercase after the colon, no trailing period, 72 characters or fewer, for example feat(api): add OpenRouter API support. Do not use chore(release); the release workflow reserves it."
+    },
+    "pullRequest": {
+      "instructions": "Format the title like a Conventional Commits header, for example fix(composer): let host own popover padding. Mark breaking changes with ! and describe the migration in the body. In the body, say what changed and why in up to 3 short paragraphs, then add a Testing section listing the checks that were run, such as npm run check."
+    }
+  }
+}

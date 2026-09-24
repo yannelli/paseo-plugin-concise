@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -120,7 +120,7 @@ test("discovery respects configured cache homes and rejects older installations"
   const current = join(claude, "plugins/cache/be-concise/concise/0.7.1");
   await fakeInstallation(current, "0.7.1");
   const found = await discoverInstallation({ HOME: home, CODEX_HOME: codex, CLAUDE_CONFIG_DIR: claude });
-  assert.equal(found!.root, current);
+  assert.equal(found!.root, await realpath(current));
   assert.equal(found!.version, "0.7.1");
 });
 

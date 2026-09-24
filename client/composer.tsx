@@ -40,7 +40,7 @@ function statusLabel(connected: boolean, bypassed: boolean, flagged: number): st
 }
 
 function ConciseContent(props: PluginButtonContentProps & { onOpenDetails: () => void }) {
-  if (props.context !== "agent") return <Text>Be concise is only available for an agent.</Text>;
+  if (props.context !== "agent") return <Label theme={props.theme} muted>Be concise is only available for an agent.</Label>;
   return <ConciseAgentContent {...props} />;
 }
 
@@ -50,7 +50,6 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
   const write = useRpc(writeConfiguration);
   const cache = useQueryClient();
   const [notice, setNotice] = useState("");
-  const [hovered, setHovered] = useState("");
   const cwd = useWorkspace(workspaceId, (workspace) => workspace.directory);
   const provider = useAgent(agentId, (agent) => agent.provider) ?? "";
   const activity = useQuery({ queryKey: ["concise", "snapshot", cwd], queryFn: () => fetchSnapshot({ cwd: cwd! }), enabled: Boolean(cwd), refetchInterval: 3000, retry: 1 });
@@ -78,24 +77,19 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
     setNotice(data.effective.softFail === !enabled ? "" : "Saved. A daemon environment override controls enforcement.");
   } });
   const disabled = !ready || mutation.isPending;
-  const rowStyle = (id: string, pressed: boolean) => ({
-    flexDirection: "row" as const, alignItems: "center" as const, gap: 10, minHeight: 36, paddingHorizontal: 10, paddingVertical: 7,
-    borderRadius: 5, backgroundColor: pressed || hovered === id ? theme.colors.surface2 : "transparent",
-  });
-  return <View style={{ minWidth: 260, maxWidth: 320, padding: 4 }}>
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, paddingVertical: 7 }}>
-      <BrandIcon theme={theme} size={16} />
-      <Text style={{ color: theme.colors.foreground, fontSize: 12, fontWeight: "500", flex: 1 }}>Be concise</Text>
-      <Pressable accessibilityRole="switch" accessibilityLabel="Enable workspace enforcement" aria-checked={!bypassed} aria-disabled={disabled} accessibilityState={{ checked: !bypassed, disabled }}
-        disabled={disabled} onPress={() => { setNotice(""); mutation.mutate(bypassed); }}
-        style={{ opacity: disabled ? 0.5 : 1 }}>
-        <ToggleIndicator theme={theme} checked={!bypassed} />
-      </Pressable>
-    </View>
-    {bypassed && <View style={{ paddingHorizontal: 10, paddingBottom: 7 }}><Label theme={theme} muted size={11}>Flagged actions allowed. Filtering stays on.</Label></View>}
-    <View style={{ marginVertical: 4, borderTopWidth: 1, borderColor: theme.colors.border }} />
-    <View style={{ paddingHorizontal: 10, paddingVertical: 6, gap: 5 }}>
-      {ready && <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+  return <View style={{ gap: 12 }}>
+    <Pressable accessibilityRole="switch" accessibilityLabel="Enable workspace enforcement" aria-checked={!bypassed} aria-disabled={disabled} accessibilityState={{ checked: !bypassed, disabled }}
+      disabled={disabled} onPress={() => { setNotice(""); mutation.mutate(bypassed); }}
+      style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <BrandIcon theme={theme} size={20} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ color: theme.colors.foreground, fontSize: 14, fontWeight: "600" }}>Be concise</Text>
+        <Label theme={theme} muted size={12}>{bypassed ? "Flagged actions allowed. Filtering stays on." : "Enforcing rules in this workspace."}</Label>
+      </View>
+      <View style={{ opacity: disabled ? 0.5 : 1 }}><ToggleIndicator theme={theme} checked={!bypassed} /></View>
+    </Pressable>
+    <View style={{ gap: 8 }}>
+      {ready && <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 4 }}>
         {counts.filter((item, index) => index < 2 || item.count > 0).map((item) => <View key={item.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
           <Icon name={item.icon} size={11} color={decisionColor(theme, item.decision)} />
           <Label theme={theme} muted size={11}>{item.count} {item.label}</Label>
@@ -119,11 +113,10 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
       {activity.data?.message && <Label theme={theme} size={12}>{activity.data.message}</Label>}
       {!!notice && <Label theme={theme} size={12}>{notice}</Label>}
     </View>
-    <View style={{ marginVertical: 4, borderTopWidth: 1, borderColor: theme.colors.border }} />
     <Pressable accessibilityRole="button" accessibilityLabel="Open activity & configuration" onPress={onOpenDetails}
-      onHoverIn={() => setHovered("details")} onHoverOut={() => setHovered("")}
-      style={({ pressed }) => rowStyle("details", pressed)}>
-      <Icon name="SlidersHorizontal" size={15} color={theme.colors.foregroundMuted} />
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 34, paddingHorizontal: 10, borderRadius: 6,
+        borderWidth: 1, borderColor: theme.colors.border, backgroundColor: pressed ? theme.colors.surface2 : theme.colors.surface1 })}>
+      <Icon name="SlidersHorizontal" size={14} color={theme.colors.foregroundMuted} />
       <Text style={{ color: theme.colors.foreground, fontSize: 13, flex: 1 }}>Activity & settings</Text>
       <Icon name="ChevronRight" size={14} color={theme.colors.foregroundMuted} />
     </Pressable>
