@@ -10,7 +10,7 @@ A native companion to [be-concise](https://github.com/yannelli/be-concise/tree/v
 
 ## Install
 
-Requires Paseo 0.9.0-beta.2 or newer and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. Paseo supplies all runtime dependencies.
+Requires Paseo 0.9.0 or newer (tested with 0.9.1) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. Paseo supplies all runtime dependencies.
 
 ```sh
 paseo plugin add yannelli/paseo-plugin-concise
