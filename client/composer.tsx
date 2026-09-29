@@ -174,7 +174,7 @@ export function contributeComposer(client: PluginClientContext) {
       if (!live() || poll.pending) return;
       poll.pending = true;
       try {
-        const cwd = workspace.directory;
+        const cwd = workspace.directory ?? (await workspace.refresh())?.workspaceDirectory;
         if (!cwd) { update("Connecting"); return; }
         const [snap, config] = await Promise.all([client.rpc(snapshot, { cwd }), client.rpc(readConfiguration, { cwd })]);
         const bypassed = config.effective.softFail === true;
