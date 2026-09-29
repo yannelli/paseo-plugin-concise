@@ -128,7 +128,6 @@ export function contributeComposer(client: PluginClientContext) {
   type Poll = { registrations: Set<PluginButtonRegistration>; label: string; timer: ReturnType<typeof setInterval>; pending: boolean };
   const polls = new Map<string, Poll>();
   const pills = new Map<string, Pill>();
-  const observed = new Set<string>();
   let disposed = false;
   function detach(id: string) {
     const pill = pills.get(id);
@@ -188,12 +187,24 @@ export function contributeComposer(client: PluginClientContext) {
     }
     void refresh();
   }
-  const unsubscribe = client.paseo.agents.subscribe((update) => {
-    if (update.kind === "remove") { observed.add(update.agentId); detach(update.agentId); }
-    if (update.kind === "upsert") { observed.add(update.agent.id); attach(update.agent); }
-  });
-  void client.paseo.agents.list().then(({ entries }) => {
-    if (!disposed) for (const { agent } of entries) if (!observed.has(agent.id)) attach(agent);
+  const lifetime = new AbortController();
+  let unsubscribe = () => {};
+  void client.paseo.agents.list({ subscribe: {}, signal: lifetime.signal }).then(({ subscription }) => {
+    if (disposed) { void subscription.release(); return; }
+    const stop = subscription.subscribe({
+      snapshot({ entries }) {
+        const current = new Set(entries.map(({ agent }) => agent.id));
+        for (const id of [...pills.keys()]) if (!current.has(id)) detach(id);
+        for (const { agent } of entries) attach(agent);
+      },
+      update(message) {
+        if (message.type !== "agent_update") return;
+        const update = message.payload;
+        if (update.kind === "remove") detach(update.agentId);
+        if (update.kind === "upsert") attach(update.agent);
+      },
+    });
+    unsubscribe = () => { stop(); void subscription.release(); };
   }).catch((error: unknown) => { if (!disposed) console.error("Unable to load concise composer badges", error); });
-  return () => { disposed = true; unsubscribe(); for (const id of [...pills.keys()]) detach(id); observed.clear(); };
+  return () => { disposed = true; lifetime.abort(); unsubscribe(); for (const id of [...pills.keys()]) detach(id); };
 }
