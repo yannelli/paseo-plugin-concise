@@ -1,12 +1,61 @@
 # Be concise for Paseo
 
-A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer badge shows enforcement status and decision counts. It opens a quick preview with a workspace enforcement toggle.
+A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer pill shows the rejected and flagged total when enforcement is on and **Off** when disabled. Open it for decision details and the workspace enforcement toggle.
 
 - Live hook decisions, searchable by tool, file, session, project, and reason. Pause the feed or open an event’s request and response.
-- A composer badge with a monochrome icon, enforcement status, and decision counts; a compact popup with workspace stats and an enforcement switch. Turning enforcement off sets the workspace's `softFail` override; flagged actions are allowed while hooks and test-output filtering remain active. Turn it on to restore enforcement. Agent environment overrides apply separately.
+- A compact composer pill with the Be concise logo and one number. The number combines rejected and flagged decisions; the popup shows each decision count and a 30-minute chart. Turning enforcement off displays **Off** and sets the workspace's `softFail` override; flagged actions are allowed while hooks and test-output filtering remain active. Turn it on to restore enforcement. Agent environment overrides apply separately.
 - Call counts, interventions, sessions, average hook duration, and a 30-minute activity chart.
 - User and project configuration with threshold controls, check switches, writing presets, an advanced JSON editor, and test filter settings.
 - An isolated playground for file writes, Codex patches, shell commands, and final replies. Previews inspect hook responses without executing the pasted command or writing the target file.
+
+## Screenshots
+
+All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app with this plugin installed, using sample activity on a separate test daemon. The first five frame real captures with a headline. See [capture details](docs/composer-pill.md#screenshots).
+
+### Composer pill
+
+![Be concise pill showing 5 next to the logo, with its popup open above the agent composer](docs/images/composer-on.png)
+
+### Live activity
+
+![Activity dashboard with the newest rejected file write expanded](docs/images/activity-desktop.png)
+
+### Configuration in light mode
+
+![User and project configuration layers in Paseo's light theme](docs/images/configuration-light.png)
+
+### Hook preview
+
+![Playground with a rejected write and its hook response](docs/images/playground.png)
+
+### Narrow screens
+
+![Composer sheet and activity feed at a 390-pixel width](docs/images/compact.png)
+
+### Enforcement off
+
+![Off pill and popup with workspace enforcement turned off](docs/images/composer-off.png)
+
+### Paused and filtered activity
+
+![Paused activity filtered to decisions that need attention](docs/images/activity-filtered.png)
+
+<details>
+<summary>Connection and empty states</summary>
+
+### Connecting
+
+![Ellipsis pill and popup while the plugin connects](docs/images/composer-connecting.png)
+
+### Unavailable
+
+![Exclamation pill and popup asking to install be-concise](docs/images/composer-unavailable.png)
+
+### No activity
+
+![Empty activity dashboard waiting for the next hook](docs/images/activity-empty.png)
+
+</details>
 
 ## Install
 
@@ -51,6 +100,8 @@ paseo plugin logs paseo-be-concise
 Tests use Node.js 24 and temporary home/project directories. They cover activity normalization, retention, stats, installation discovery, config conflicts, file permissions, and preview isolation. Integration tests require an installed be-concise; set `PASEO_CONCISE_ROOT` to a checkout to select it explicitly.
 
 Paseo API reference: [v0.9 plugins](https://paseo.sh/docs/plugins/v0.9/reference).
+
+See the [documentation index](docs/INDEX.md) for the current composer button contract and screenshot capture details. Consult it when changing pill labels or updating screenshots.
 
 ## Releases
 
