@@ -19,7 +19,7 @@ The pill counts `deny`, `block`, `ask`, and `flag`. Allowed, rewritten, bypassed
 
 ## Screenshots
 
-The [README gallery](../README.md#screenshots) uses scenario headings and PNG links, following the [Shared Browser example](https://github.com/omercnet/paseo-plugins/tree/d7b3e654f364b5be72edf6fd1d914a3750b53082/paseo-shared-browser#screenshots). [Paseo Cafe](https://github.com/paseo-cafe/paseo-cafe) reads the first 8 README images when the repository has no root `images/` folder, and its grid crops each tile to the center. Keep the banners first and the connection and empty states last.
+The [README gallery](../README.md#screenshots) uses scenario headings and PNG links, following the [Shared Browser example](https://github.com/omercnet/paseo-plugins/tree/d7b3e654f364b5be72edf6fd1d914a3750b53082/paseo-shared-browser#screenshots). The promo banners come first. The connection and empty states come last.
 
 Every image in [images/](images/) is 1920×1080 (16:9). Captures were taken on 2026-10-04 from the Paseo 0.11.0-beta.3 web app, served by a separate test daemon with this plugin installed from the repository and be-concise 0.8.2. Sample hook records, a sample Git project, and an imported sample Claude Code session supplied the data. No prompt was sent to an agent.
 
