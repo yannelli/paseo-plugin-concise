@@ -1,3 +1,4 @@
+import type { PluginTheme } from "@getpaseo/plugin";
 import {
   type PluginButtonContentProps,
   type PluginButtonIconProps,
@@ -10,33 +11,51 @@ import {
 import { Icon } from "@getpaseo/plugin/client/react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, View, type ViewStyle } from "react-native";
 import { readConfiguration, snapshot, writeConfiguration } from "../shared/contracts";
 import { enforcementUpdate } from "../shared/enforcement";
 import { BrandIcon } from "./brand";
-import { decisionColor, Label, ToggleIndicator } from "./ui";
+import { Label, ToggleIndicator } from "./ui";
 
 const PILL_ID = "concise";
-const PILL_TITLE = "Be concise: quick preview and enforcement";
 const POLL_MS = 3000;
 const decisionGroups = [
-  { label: "allowed", names: ["allow"], icon: "Check", decision: "allow" },
-  { label: "rejected", names: ["deny", "block"], icon: "X", decision: "deny" },
-  { label: "flagged", names: ["ask", "flag"], icon: "TriangleAlert", decision: "flag" },
-  { label: "rewritten", names: ["rewrite"], icon: "Pencil", decision: "rewrite" },
-  { label: "bypassed", names: ["bypass"], icon: "SkipForward", decision: "bypass" },
-  { label: "errors", names: ["error"], icon: "CircleAlert", decision: "error" },
+  { label: "allowed", names: ["allow"], decision: "allow" },
+  { label: "rejected", names: ["deny", "block"], decision: "deny" },
+  { label: "flagged", names: ["ask", "flag"], decision: "flag" },
+  { label: "rewritten", names: ["rewrite"], decision: "rewrite" },
+  { label: "bypassed", names: ["bypass"], decision: "bypass" },
+  { label: "errors", names: ["error"], decision: "error" },
 ];
+const CHART_HEIGHT = 40;
 
-/** Renders the brand mark tinted to the host's assigned pill color; the label carries live status. */
+function attentionColor(theme: PluginTheme, decision: string) {
+  if (["deny", "block", "error"].includes(decision)) return theme.colors.statusDanger;
+  if (["ask", "flag"].includes(decision)) return theme.colors.statusWarning;
+  return null;
+}
+
+const stackOrder = (decision: string) => ["deny", "block", "error"].includes(decision) ? 2 : ["ask", "flag"].includes(decision) ? 1 : 0;
+
+function Swatch({ theme, decision, style }: { theme: PluginTheme; decision: string; style: ViewStyle }) {
+  const color = attentionColor(theme, decision);
+  return <View style={[style, { backgroundColor: color ?? theme.colors.foregroundMuted, opacity: color ? 1 : 0.35 }]} />;
+}
+
+function decisionCounts(decisions: { name: string; count: number }[]) {
+  return decisionGroups.map((group) => ({ ...group, count: decisions.reduce((sum, item) => sum + (group.names.includes(item.name) ? item.count : 0), 0) }))
+    .filter((item, index) => index < 2 || item.count > 0);
+}
+
 function ConciseIcon({ theme, size, color }: PluginButtonIconProps) {
   return <BrandIcon theme={theme} size={size} monochrome color={color} />;
 }
 
-/** Short live status for the pill label, e.g. "Enabled · 3 flagged". Mirrors the poll loop's own copy in attach(). */
-function statusLabel(connected: boolean, bypassed: boolean, flagged: number): string {
-  const base = !connected ? "Connecting" : bypassed ? "Bypassed" : "Enabled";
-  return flagged > 0 ? `${base} · ${flagged} flagged` : base;
+function pillStatus(state: "Connecting" | "Enabled" | "Bypassed" | "Unavailable", decisions: { name: string; count: number }[] = []) {
+  const attention = decisionCounts(decisions).filter((item) => item.decision === "deny" || item.decision === "flag").reduce((sum, item) => sum + item.count, 0);
+  const labels = { Connecting: "…", Enabled: String(attention), Bypassed: "Off", Unavailable: "!" };
+  const summaries = { Connecting: "Connecting", Enabled: `${attention} rejected or flagged`, Bypassed: "Enforcement off", Unavailable: "Unavailable" };
+  return { label: labels[state], icon: ConciseIcon, title: `Be concise · ${summaries[state]}` };
 }
 
 function ConciseContent(props: PluginButtonContentProps & { onOpenDetails: () => void }) {
@@ -57,7 +76,7 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
   const bypassed = config.data?.effective.softFail === true;
   const failed = activity.isError || config.isError;
   const ready = activity.data?.connected && Boolean(config.data) && !failed;
-  const counts = decisionGroups.map((group) => ({ ...group, count: (activity.data?.stats.decisions ?? []).reduce((sum, item) => sum + (group.names.includes(item.name) ? item.count : 0), 0) }));
+  const counts = decisionCounts(activity.data?.stats.decisions ?? []);
   const minutes = (activity.data?.stats.minutes ?? []).map((minute) => {
     const start = Date.parse(minute.timestamp);
     const decisions = new Map<string, number>();
@@ -65,7 +84,7 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
       const timestamp = Date.parse(event.timestamp);
       if (timestamp >= start && timestamp < start + 60_000) decisions.set(event.decision, (decisions.get(event.decision) ?? 0) + 1);
     }
-    return { ...minute, decisions: [...decisions].sort(([a], [b]) => a.localeCompare(b)) };
+    return { ...minute, decisions: [...decisions].sort(([a], [b]) => stackOrder(a) - stackOrder(b) || a.localeCompare(b)) };
   });
   const maximum = Math.max(1, ...minutes.map((minute) => minute.count));
   const mutation = useMutation({ mutationFn: async (enabled: boolean) => {
@@ -77,6 +96,8 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
     setNotice(data.effective.softFail === !enabled ? "" : "Saved. A daemon environment override controls enforcement.");
   } });
   const disabled = !ready || mutation.isPending;
+  const problem = mutation.error?.message ?? activity.data?.message ?? activity.error?.message ?? config.error?.message;
+  const status = !ready ? problem ? "be-concise is unavailable." : "Connecting…" : bypassed ? "Flagged actions allowed. Filtering stays on." : "Enforcing rules in this workspace.";
   return <View style={{ gap: 12 }}>
     <Pressable accessibilityRole="switch" accessibilityLabel="Enable workspace enforcement" aria-checked={!bypassed} aria-disabled={disabled} accessibilityState={{ checked: !bypassed, disabled }}
       disabled={disabled} onPress={() => { setNotice(""); mutation.mutate(bypassed); }}
@@ -84,23 +105,30 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
       <BrandIcon theme={theme} size={20} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={{ color: theme.colors.foreground, fontSize: 14, fontWeight: "600" }}>Be concise</Text>
-        <Label theme={theme} muted size={12}>{bypassed ? "Flagged actions allowed. Filtering stays on." : "Enforcing rules in this workspace."}</Label>
+        <Label theme={theme} muted size={12}>{status}</Label>
       </View>
-      <View style={{ opacity: disabled ? 0.5 : 1 }}><ToggleIndicator theme={theme} checked={!bypassed} /></View>
+      {ready && <View style={{ opacity: disabled ? 0.5 : 1 }}><ToggleIndicator theme={theme} checked={!bypassed} /></View>}
     </Pressable>
     <View style={{ gap: 8 }}>
-      {ready && <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 4 }}>
-        {counts.filter((item, index) => index < 2 || item.count > 0).map((item) => <View key={item.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-          <Icon name={item.icon} size={11} color={decisionColor(theme, item.decision)} />
-          <Label theme={theme} muted size={11}>{item.count} {item.label}</Label>
+      {ready && <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 18, rowGap: 8 }}>
+        {counts.map((item) => <View key={item.label} style={{ gap: 2 }}>
+          <Text style={{ color: theme.colors.foreground, fontSize: 15, fontWeight: "600", fontVariant: ["tabular-nums"] }}>{item.count}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+            <Swatch theme={theme} decision={item.decision} style={{ width: 6, height: 6, borderRadius: 3 }} />
+            <Label theme={theme} muted size={11}>{item.label}</Label>
+          </View>
         </View>)}
       </View>}
-      {ready && <View style={{ gap: 3 }}>
-        <View style={{ height: 48, flexDirection: "row", alignItems: "flex-end", gap: 2, borderBottomWidth: 1, borderColor: theme.colors.border }}>
+      {ready && <View style={{ gap: 4 }}>
+        <View style={{ height: CHART_HEIGHT, flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
           {minutes.map((minute) => <View key={minute.timestamp} accessible accessibilityRole="image"
             accessibilityLabel={`${new Date(minute.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}: ${minute.count} calls${minute.decisions.map(([decision, count]) => `, ${count} ${decision}`).join("")}`}
-            style={{ flex: 1, height: 46, flexDirection: "column-reverse" }}>
-            {minute.decisions.map(([decision, count]) => <View key={decision} style={{ height: 46 * count / maximum, backgroundColor: decisionColor(theme, decision) }} />)}
+            style={{ flex: 1, height: CHART_HEIGHT, flexDirection: "column-reverse" }}>
+            {minute.count === 0
+              ? <View style={{ height: 2, borderRadius: 1, backgroundColor: theme.colors.border }} />
+              : <View style={{ flexDirection: "column-reverse", borderTopLeftRadius: 2, borderTopRightRadius: 2, overflow: "hidden" }}>
+                {minute.decisions.map(([decision, count]) => <Swatch key={decision} theme={theme} decision={decision} style={{ height: Math.max(2, CHART_HEIGHT * count / maximum) }} />)}
+              </View>}
           </View>)}
         </View>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -109,8 +137,7 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
         </View>
         {!minutes.some((minute) => minute.count > 0) && <Label theme={theme} muted size={11}>No recent activity</Label>}
       </View>}
-      {(activity.error || config.error || mutation.error) && <Label theme={theme} size={12}>{activity.error?.message ?? config.error?.message ?? mutation.error?.message}</Label>}
-      {activity.data?.message && <Label theme={theme} size={12}>{activity.data.message}</Label>}
+      {problem && <Label theme={theme} size={12}>{problem}</Label>}
       {!!notice && <Label theme={theme} size={12}>{notice}</Label>}
     </View>
     <Pressable accessibilityRole="button" accessibilityLabel="Open activity & configuration" onPress={onOpenDetails}
@@ -125,7 +152,7 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
 
 export function contributeComposer(client: PluginClientContext) {
   type Pill = { workspaceId: string; registration: PluginButtonRegistration };
-  type Poll = { registrations: Set<PluginButtonRegistration>; label: string; timer: ReturnType<typeof setInterval>; pending: boolean };
+  type Poll = { registrations: Set<PluginButtonRegistration>; status: ReturnType<typeof pillStatus>; timer: ReturnType<typeof setInterval>; pending: boolean };
   const polls = new Map<string, Poll>();
   const pills = new Map<string, Pill>();
   let disposed = false;
@@ -152,7 +179,7 @@ export function contributeComposer(client: PluginClientContext) {
     const registration = client.addComposerPill({
       id: PILL_ID, workspaceId, agentId,
       button: {
-        title: PILL_TITLE, label: polls.get(workspaceId)?.label ?? "Connecting", icon: ConciseIcon,
+        ...polls.get(workspaceId)?.status ?? pillStatus("Connecting"),
         behavior: { kind: "popover", Content: (props) => <ConciseContent {...props} onOpenDetails={() => { props.close(); client.openPanel("workspace", { workspaceId }); }} /> },
       },
     });
@@ -161,26 +188,25 @@ export function contributeComposer(client: PluginClientContext) {
     if (existing) { existing.registrations.add(registration); return; }
     const workspace = client.paseo.workspaces.ref(workspaceId);
     const timer = setInterval(() => void refresh(), POLL_MS);
-    const poll: Poll = { registrations: new Set([registration]), label: "Connecting", timer, pending: false };
+    const poll: Poll = { registrations: new Set([registration]), status: pillStatus("Connecting"), timer, pending: false };
     polls.set(workspaceId, poll);
     const live = () => !disposed && polls.get(workspaceId) === poll;
-    function update(label: string) {
+    function update(status: ReturnType<typeof pillStatus>) {
       if (!live()) return;
-      poll.label = label;
-      for (const item of poll.registrations) item.update({ label });
+      poll.status = status;
+      for (const item of poll.registrations) item.update(status);
     }
     async function refresh() {
       if (!live() || poll.pending) return;
       poll.pending = true;
       try {
         const cwd = workspace.directory ?? (await workspace.refresh())?.workspaceDirectory;
-        if (!cwd) { update("Connecting"); return; }
+        if (!cwd) { update(pillStatus("Connecting")); return; }
         const [snap, config] = await Promise.all([client.rpc(snapshot, { cwd }), client.rpc(readConfiguration, { cwd })]);
         const bypassed = config.effective.softFail === true;
-        const flagged = snap.stats.decisions.reduce((sum, item) => sum + (["ask", "flag"].includes(item.name) ? item.count : 0), 0);
-        update(statusLabel(snap.connected, bypassed, flagged));
+        update(pillStatus(!snap.connected ? "Connecting" : bypassed ? "Bypassed" : "Enabled", snap.stats.decisions));
       } catch {
-        update("Unavailable");
+        update(pillStatus("Unavailable"));
       } finally {
         poll.pending = false;
       }

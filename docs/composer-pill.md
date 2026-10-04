@@ -1,0 +1,30 @@
+# Composer pill and screenshots
+
+Created: 2026-10-04. Last updated: 2026-10-04.
+
+## Button contract
+
+Paseo composer pills display an icon and a non-empty label. Omitting `label` displays `title`. The title also supplies the accessible label, tooltip, and sheet title. See the [Paseo composer pill reference](https://paseo.sh/docs/plugins/reference#composer-pills) and [button descriptor](https://paseo.sh/docs/plugins/reference#button-descriptor), checked on 2026-10-04.
+
+Every pill state uses the monochrome Be concise logo. The enabled label is the combined rejected and flagged count. The popup lists each decision count, and its 30-minute chart colors only rejected and flagged decisions. The title is a short summary, such as `Be concise · 5 rejected or flagged`, so the mobile sheet title fits. Agents in the same workspace share the polled label, icon, and title.
+
+| State | Label |
+| --- | --- |
+| Enforcing rules | One count, for example `11` |
+| Workspace enforcement bypassed | `Off` |
+| Connecting | `…` |
+| Read failed | `!` |
+
+The pill counts `deny`, `block`, `ask`, and `flag`. Allowed, rewritten, bypassed, and error counts stay in the popup.
+
+## Screenshots
+
+The [README gallery](../README.md#screenshots) uses scenario headings and PNG links, following the [Shared Browser example](https://github.com/omercnet/paseo-plugins/tree/d7b3e654f364b5be72edf6fd1d914a3750b53082/paseo-shared-browser#screenshots). [Paseo Cafe](https://github.com/paseo-cafe/paseo-cafe) reads the first 8 README images when the repository has no root `images/` folder, and its grid crops each tile to the center. Keep the banners first and the connection and empty states last.
+
+Every image in [images/](images/) is 1920×1080 (16:9). Captures were taken on 2026-10-04 from the Paseo 0.11.0-beta.3 web app, served by a separate test daemon with this plugin installed from the repository and be-concise 0.8.2. Sample hook records, a sample Git project, and an imported sample Claude Code session supplied the data. No prompt was sent to an agent.
+
+- **Banners** (`composer-on`, `activity-desktop`, `configuration-light`, `playground`, `compact`): a 960×540 HTML layout rendered at 2× around crops of 1440×900 captures at 2× pixel density. The narrow-screen banner shows two 390×844 captures.
+- **Plain captures** (`composer-off`, `activity-filtered`, `composer-connecting`, `composer-unavailable`, `activity-empty`): 1280×720 viewports at 1.5× pixel density.
+- **States**: Off was set through the project's `softFail` setting. Connecting was captured while the plugin process was paused. Unavailable was captured with be-concise removed from the test home. Empty was captured with no hook records.
+
+The test daemon reported the host name `devbox`. Native mobile apps and the desktop app were not checked.
