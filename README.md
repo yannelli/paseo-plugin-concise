@@ -1,6 +1,6 @@
 # Be concise for Paseo
 
-A native companion to [be-concise](https://github.com/yannelli/be-concise/tree/v0.7.0) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer badge shows enforcement status and decision counts. It opens a quick preview with a workspace enforcement toggle.
+A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer badge shows enforcement status and decision counts. It opens a quick preview with a workspace enforcement toggle.
 
 - Live hook decisions, searchable by tool, file, session, project, and reason. Pause the feed or open an event’s request and response.
 - A composer badge with a monochrome icon, enforcement status, and decision counts; a compact popup with workspace stats and an enforcement switch. Turning enforcement off sets the workspace's `softFail` override; flagged actions are allowed while hooks and test-output filtering remain active. Turn it on to restore enforcement. Agent environment overrides apply separately.
@@ -68,3 +68,5 @@ Use Conventional Commits in commits and squash-merge titles:
 The highest change since the last release determines the next version. For example, `fix: repair the badge` changes `0.1.0` to `0.1.1`; `feat: add a filter` changes it to `0.2.0`.
 
 Run `npm run release:dry-run` from a clean `main` checkout with all tags fetched to preview the next release. Rerun the **Release** workflow to complete a publication interrupted after its tag was pushed.
+
+Questions or feedback? Please reach out to me at [Ryan Yannelli](https://ryanyannelli.com) or open an issue/PR.
