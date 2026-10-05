@@ -1,3 +1,5 @@
+![Be Concise for Paseo: stop wordy agent edits.](docs/images/github-banner.png)
+
 # Be concise for Paseo
 
 A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer pill shows the rejected and flagged total when enforcement is on and **Off** when disabled. Open it for decision details and the workspace enforcement toggle.
