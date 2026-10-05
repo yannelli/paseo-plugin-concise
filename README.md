@@ -66,14 +66,31 @@ All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app in lig
 
 Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. See [be-concise 0.10 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
 
+Install the npm release:
+
 ```sh
 paseo plugin add npm:@yannelli/paseo-be-concise
 paseo plugin ls
 ```
 
-To install from GitHub instead, run `paseo plugin add yannelli/paseo-plugin-concise`.
+`paseo plugin update paseo-be-concise` shows the installed and proposed revisions before it updates. To pin a version, add it to the source, for example `npm:@yannelli/paseo-be-concise@2.3.0`.
 
-For local development:
+Plugins must be enabled in Paseo Settings → Plugins. Installation runs trusted code with the daemon user’s access.
+
+The plugin detects installed be-concise versions in the Claude and Codex caches, respecting `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. For a source checkout or custom installation, set `PASEO_CONCISE_ROOT` in the daemon environment to the repository or `plugins/concise` directory, then reload this plugin.
+
+### Older Paseo versions
+
+Paseo installs npm sources from 0.9.0. On older Paseo, install the Git tag built for that version:
+
+| Paseo | Plugin tag | Command |
+| --- | --- | --- |
+| 0.8.0 | `v1.0.0` | `paseo plugin add yannelli/paseo-plugin-concise --ref v1.0.0` |
+| 0.7.2 | `v0.2.9` | `paseo plugin add yannelli/paseo-plugin-concise --ref v0.2.9` |
+
+These tags do not have later features, such as the Plugin tab and the be-concise 0.10 controls. On Paseo 0.9.0 or newer, `--ref` also installs a 2.x tag that is not on npm, for example `--ref v2.2.0`. See [npm publishing](docs/npm-publishing.md#paseo-versions) for the sources.
+
+### Local development
 
 ```sh
 git clone https://github.com/yannelli/paseo-plugin-concise.git
@@ -83,10 +100,6 @@ npm run check
 paseo plugin install "$PWD"
 paseo plugin ls
 ```
-
-Plugins must be enabled in Paseo Settings → Plugins. Installation runs trusted code with the daemon user’s access.
-
-The plugin detects installed be-concise versions in the Claude and Codex caches, respecting `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. For a source checkout or custom installation, set `PASEO_CONCISE_ROOT` in the daemon environment to the repository or `plugins/concise` directory, then reload this plugin.
 
 ### Install be-concise from Paseo
 

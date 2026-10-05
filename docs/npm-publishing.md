@@ -10,6 +10,19 @@ paseo plugin add npm:@yannelli/paseo-be-concise
 
 Paseo runs `npm install --omit=dev --ignore-scripts` on the daemon host and compiles `index.client.tsx` and `index.server.ts` itself. The tarball holds TypeScript source only, listed in `files` in `package.json`. Paseo resolves plugin modules only under `client/`, `server/`, and `shared/`. Run `npm pack --dry-run` to check the file list after you add a top-level file.
 
+## Paseo versions
+
+Paseo added npm plugin sources, including versions, tags, and ranges, in [0.9.0](https://github.com/getpaseo/paseo/releases/tag/v0.9.0). The source parser tests in `packages/protocol/src/plugin-source-reference.test.ts` show the pin syntax `npm:<name>@<version>`. `paseo plugin add` in Paseo 0.7.2 and 0.8.0 takes a GitHub `owner/repo` source and `--ref <branch, tag, or commit>`. Sources checked on 2026-10-05 at the `v0.7.2`, `v0.8.0`, `v0.9.0`, and `v0.10.3` tags of [getpaseo/paseo](https://github.com/getpaseo/paseo).
+
+| Plugin tag | `paseo-plugin.json` requirement | README requirement |
+| --- | --- | --- |
+| `v0.2.9` | none | Paseo 0.7.2 |
+| `v1.0.0` | `paseo >=0.8.0` | Paseo 0.8.0 |
+| `v2.0.0` | `paseo >=0.9.0-beta.2` | Paseo 0.9.0-beta.2 or newer |
+| `v2.0.1` to `v2.3.0` | `paseo >=0.9.0` | Paseo 0.9.0 or newer |
+
+npm has 2.3.0 and later. Earlier 2.x versions install from their Git tags.
+
 ## Workflow step
 
 The **Publish npm package** step reads the name and version from `package.json`. It runs `npm publish` when npm does not have that version yet. A rerun after a failed publish completes it. A push with no release-triggering commits skips it because npm already has the version.
