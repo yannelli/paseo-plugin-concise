@@ -1,6 +1,6 @@
 # Composer pill and screenshots
 
-Created: 2026-10-04. Last updated: 2026-10-04.
+Created: 2026-10-04. Last updated: 2026-10-05.
 
 ## Button contract
 
@@ -21,9 +21,9 @@ The pill counts `deny`, `block`, `ask`, and `flag`. Allowed, rewritten, bypassed
 
 The [README gallery](../README.md#screenshots) uses scenario headings and PNG links, following the [Shared Browser example](https://github.com/omercnet/paseo-plugins/tree/d7b3e654f364b5be72edf6fd1d914a3750b53082/paseo-shared-browser#screenshots). The promo banners come first. The connection and empty states come last.
 
-Every image in [images/](images/) is 1920×1080 (16:9). Captures were taken on 2026-10-04 from the Paseo 0.11.0-beta.3 web app, served by a separate test daemon with this plugin installed from the repository and be-concise 0.8.2. Sample hook records, a sample Git project, and an imported sample Claude Code session supplied the data. No prompt was sent to an agent.
+Every image in [images/](images/) is 1920×1080 (16:9). Captures were taken on 2026-10-04 from the Paseo 0.11.0-beta.3 web app in light mode, served by a separate test daemon with this plugin installed from the repository and be-concise 0.8.2. Sample hook records, a sample Git project, and an imported sample Claude Code session supplied the data. No prompt was sent to an agent.
 
-- **Banners** (`composer-on`, `activity-desktop`, `configuration-light`, `playground`, `compact`): a 960×540 HTML layout rendered at 2× around crops of 1440×900 captures at 2× pixel density. The narrow-screen banner shows two 390×844 captures.
+- **Banners** (`composer-on`, `activity-desktop`, `configuration-light`, `playground`, `compact`): a 960×540 HTML layout rendered at 2× around tight crops of 1440×900 captures at 2× pixel density. Each capture card ends 56 pixels above the bottom edge at 1×. The narrow-screen banner shows two 390×844 captures beside the headline. The playground banner outlines the `decision` field of the hook response. Each banner shows the logo and "Be Concise" above the headline, the repository name with the GitHub mark at the bottom left, and a faint copy of the logo behind the screenshots. Colors, logo, and the Geist font come from the [be-concise theme](https://github.com/yannelli/be-concise/blob/main/plugins/concise/web/public/theme.css): charcoal `#18191D` background, cream `#FAF7F2` text, and orange `#FF4A24` accents.
 - **Plain captures** (`composer-off`, `activity-filtered`, `composer-connecting`, `composer-unavailable`, `activity-empty`): 1280×720 viewports at 1.5× pixel density.
 - **States**: Off was set through the project's `softFail` setting. Connecting was captured while the plugin process was paused. Unavailable was captured with be-concise removed from the test home. Empty was captured with no hook records.
 

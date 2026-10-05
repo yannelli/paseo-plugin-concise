@@ -1,0 +1,117 @@
+@font-face {
+  font-family: Geist;
+  src: url('./assets/geist.woff2') format('woff2');
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./assets/geist-mono.woff2') format('woff2');
+  font-weight: 100 900;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #faf7f2;
+  color: #18191d;
+  font-family: Geist, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.brand {
+  position: absolute;
+  top: 70px;
+  left: 88px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -1.2px;
+}
+.brand svg { width: 65px; height: 45px; }
+.brand rect { fill: #ff4a24; }
+.brand span { font-weight: 450; color: #716f6b; }
+.copy {
+  position: absolute;
+  left: 88px;
+  top: 284px;
+  width: 730px;
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 21px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.eyebrow::before { content: ''; width: 28px; height: 5px; background: #ff4a24; }
+h1 {
+  margin: 35px 0 27px;
+  font-size: 114px;
+  line-height: 1.01;
+  letter-spacing: -5.8px;
+  font-weight: 750;
+}
+h1 em { font-style: normal; color: #ff4a24; }
+.description {
+  margin: 0;
+  font-size: 29px;
+  line-height: 1.45;
+  letter-spacing: -.6px;
+  color: #68645f;
+}
+.stage {
+  position: absolute;
+  left: 888px;
+  top: 144px;
+  width: 952px;
+  height: 800px;
+  border-radius: 40px;
+  background: #ff4a24;
+  overflow: hidden;
+}
+.stage .watermark {
+  position: absolute;
+  width: 1260px;
+  height: 860px;
+  left: -200px;
+  top: -30px;
+  color: #95250d;
+  opacity: .2;
+}
+.capture {
+  position: absolute;
+  overflow: hidden;
+  border: 8px solid #292a2e;
+  border-radius: 24px;
+  box-shadow: 0 25px 45px #55160744, 0 3px 0 #ffffff33 inset;
+  background: #191d1b;
+}
+.capture img { position: absolute; max-width: none; }
+.theme-light .capture { background: #fff; }
+.capture.phone { border-radius: 34px; border-width: 7px; }
+.phone img { width: 100%; height: auto; position: static; display: block; }
+.stage-label {
+  position: absolute;
+  left: 36px;
+  top: 25px;
+  color: #44190f;
+  font: 18px 'Geist Mono', monospace;
+}
+.stage-label::before { content: '+'; margin-right: 11px; }
+footer {
+  position: absolute;
+  left: 88px;
+  right: 80px;
+  bottom: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 23px 'Geist Mono', monospace;
+  letter-spacing: -.7px;
+}
+.page-number { color: #79746e; font-size: 20px; }
