@@ -18,14 +18,15 @@ The **Publish npm package** step reads the name and version from `package.json`.
 
 ## Authentication
 
-npm CLI 11.5.1 or newer on Node.js 22.14.0 or newer tries [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC) first. Without a trusted publisher on the package, it uses `NODE_AUTH_TOKEN`, which the step reads from the `NPM_TOKEN` repository secret. The current token is a granular token scoped to `@yannelli` that bypasses 2FA and expires on 2027-01-03. [From January 2027](https://github.blog/changelog/2026-07-31-restricting-npm-bypass-2fa-granular-access-tokens/), npm blocks direct publish with 2FA-bypass tokens, so token-based releases stop then. Set up the trusted publisher before that date.
+The package has a [trusted publisher](https://docs.npmjs.com/trusted-publishers) for `release.yml` in `yannelli/paseo-plugin-concise`, added on 2026-10-05. npm CLI 11.5.1 or newer on Node.js 22.14.0 or newer exchanges the job's OIDC token for a short-lived publish token. The workflow reads no npm secret.
 
-`npm trust` rejects tokens that bypass 2FA, and the package must exist on npm. To add the trusted publisher, sign in with 2FA and run:
+The trust entry names the workflow file. When you rename `release.yml` or move the publish step to another workflow, replace the entry. `npm trust` requires a 2FA login and rejects tokens that bypass 2FA:
 
 ```sh
 npm login
-npm trust github @yannelli/paseo-be-concise --repo yannelli/paseo-plugin-concise --file release.yml --allow-publish
 npm trust list @yannelli/paseo-be-concise
+npm trust revoke @yannelli/paseo-be-concise --id=<trust-id>
+npm trust github @yannelli/paseo-be-concise --repo yannelli/paseo-plugin-concise --file <workflow>.yml --allow-publish
 ```
 
-Or open the package on npmjs.com, then **Settings → Trusted publishing**, and add GitHub Actions, with owner `yannelli`, repository `paseo-plugin-concise`, and workflow `release.yml`. After the next release publishes through OIDC, delete the `NPM_TOKEN` secret and set **Publishing access** to require 2FA and disallow tokens.
+The npmjs.com equivalent is the package's **Settings → Trusted publishing**. Set **Publishing access** to require 2FA and disallow tokens, because the workflow publishes without a token.

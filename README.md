@@ -114,7 +114,7 @@ See the [documentation index](docs/INDEX.md) for the current composer button con
 
 ## Releases
 
-GitHub Actions runs the checks and publishes a GitHub release on qualifying pushes to `main`. The first release is `v0.1.0`. The workflow updates `package.json` and `package-lock.json`, pushes an annotated tag, and publishes release notes with the repository's `GITHUB_TOKEN`. It then publishes [`@yannelli/paseo-be-concise`](https://www.npmjs.com/package/@yannelli/paseo-be-concise) to npm through trusted publishing, or with the `NPM_TOKEN` secret when no trusted publisher is set. See [npm publishing](docs/npm-publishing.md) for the package contents and the trusted publisher setup.
+GitHub Actions runs the checks and publishes a GitHub release on qualifying pushes to `main`. The first release is `v0.1.0`. The workflow updates `package.json` and `package-lock.json`, pushes an annotated tag, and publishes release notes with the repository's `GITHUB_TOKEN`. It then publishes [`@yannelli/paseo-be-concise`](https://www.npmjs.com/package/@yannelli/paseo-be-concise) to npm through trusted publishing (OIDC), with no npm token. See [npm publishing](docs/npm-publishing.md) for the package contents and the trusted publisher setup.
 
 Use Conventional Commits in commits and squash-merge titles:
 
