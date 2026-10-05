@@ -1,3 +1,5 @@
+![Be Concise for Paseo: stop wordy agent edits.](docs/images/github-banner.png)
+
 # Be concise for Paseo
 
 A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer pill shows the rejected and flagged total when enforcement is on and **Off** when disabled. Open it for decision details and the workspace enforcement toggle.
@@ -10,7 +12,7 @@ A native companion to [be-concise](https://github.com/yannelli/be-concise) for C
 
 ## Screenshots
 
-All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app with this plugin installed, using sample activity on a separate test daemon. The first five frame real captures with a headline. See [capture details](docs/composer-pill.md#screenshots).
+All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app in light mode with this plugin installed, using sample activity on a separate test daemon. The first five frame real captures with a headline. See [capture details](docs/composer-pill.md#screenshots).
 
 ### Composer pill
 
@@ -20,9 +22,9 @@ All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app with t
 
 ![Activity dashboard with the newest rejected file write expanded](docs/images/activity-desktop.png)
 
-### Configuration in light mode
+### Configuration
 
-![User and project configuration layers in Paseo's light theme](docs/images/configuration-light.png)
+![User and project configuration layers](docs/images/configuration-light.png)
 
 ### Hook preview
 
