@@ -7,10 +7,20 @@ import { Pressable, Text, TextInput, View } from "react-native";
 import { type ActivityEvent, type ActivityStats, eventDetail } from "../shared/contracts";
 import { Button, Card, decisionColor, Label, Row } from "./ui";
 
-const filters = [
+const ATTENTION = ["deny", "ask", "block", "error"];
+const knownFilters = [
   { value: "all", label: "All decisions" }, { value: "attention", label: "Needs attention" }, { value: "allow", label: "Allowed" },
-  { value: "flag", label: "Flagged" }, { value: "rewrite", label: "Rewritten" }, { value: "bypass", label: "Bypassed" },
+  { value: "flag", label: "Flagged" }, { value: "rewrite", label: "Rewritten" }, { value: "filter", label: "Filtered" },
+  { value: "bypass", label: "Bypassed" }, { value: "context", label: "Rules sent" },
 ];
+
+function decisionFilters(stats: ActivityStats) {
+  const count = (names: string[]) => stats.decisions.reduce((sum, item) => sum + (names.includes(item.name) ? item.count : 0), 0);
+  const known = new Set([...knownFilters.map((item) => item.value), ...ATTENTION]);
+  const extra = stats.decisions.filter((item) => !known.has(item.name)).map((item) => ({ value: item.name, label: item.name }));
+  return [...knownFilters, ...extra].map((item) => ({ ...item,
+    count: item.value === "all" ? stats.total : count(item.value === "attention" ? ATTENTION : [item.value]) }));
+}
 
 export function Activity({ theme, compact, events, stats, paused, onPause }: {
   theme: PluginTheme; compact: boolean; events: ActivityEvent[]; stats: ActivityStats; paused: boolean; onPause: () => void;
@@ -20,8 +30,9 @@ export function Activity({ theme, compact, events, stats, paused, onPause }: {
   const [limit, setLimit] = useState(60);
   const [statsOpen, setStatsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const filters = decisionFilters(stats);
   const visible = useMemo(() => events.filter((event) =>
-    (filter === "all" || (filter === "attention" ? ["deny", "ask", "block", "error"].includes(event.decision) : event.decision === filter)) &&
+    (filter === "all" || (filter === "attention" ? ATTENTION.includes(event.decision) : event.decision === filter)) &&
     `${event.tool} ${event.hook} ${event.target} ${event.summary} ${event.session} ${event.projectName}`.toLowerCase().includes(search.toLowerCase())
   ), [events, filter, search]);
   const maximum = Math.max(1, ...stats.minutes.map((minute) => minute.count));
@@ -64,7 +75,7 @@ export function Activity({ theme, compact, events, stats, paused, onPause }: {
         <Pressable accessibilityRole="button" accessibilityLabel="Filter activity" accessibilityState={{ expanded: filtersOpen }} onPress={() => setFiltersOpen(!filtersOpen)}
           style={{ flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 6, minHeight: 30, paddingHorizontal: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 6 }}>
           <Icon name="ListFilter" size={13} color={theme.colors.foregroundMuted} />
-          <Label theme={theme} size={12}>{filters.find((item) => item.value === filter)?.label}</Label>
+          <Label theme={theme} size={12}>{filters.find((item) => item.value === filter)?.label ?? filter}</Label>
           <Icon name={filtersOpen ? "ChevronUp" : "ChevronDown"} size={12} color={theme.colors.foregroundMuted} />
         </Pressable>
         {filtersOpen && <View style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, padding: 4, backgroundColor: theme.colors.surface1 }}>
@@ -73,7 +84,8 @@ export function Activity({ theme, compact, events, stats, paused, onPause }: {
             style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8, minHeight: 30, borderRadius: 4,
               backgroundColor: pressed || filter === item.value ? theme.colors.surface2 : "transparent" })}>
             <View style={{ width: 14 }}>{filter === item.value && <Icon name="Check" size={14} color={theme.colors.foreground} />}</View>
-            <Label theme={theme} size={12}>{item.label}</Label>
+            <View style={{ flex: 1, minWidth: 0 }}><Label theme={theme} size={12}>{item.label}</Label></View>
+            <Text style={{ color: filter === item.value ? theme.colors.foreground : theme.colors.foregroundMuted, fontSize: 12, fontVariant: ["tabular-nums"] }}>{item.count}</Text>
           </Pressable>)}
         </View>}
       </View>

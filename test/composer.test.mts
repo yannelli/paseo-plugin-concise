@@ -101,7 +101,7 @@ test("composer pill shows one attention count when enabled and Off when bypassed
   assertStatus(button, "11", "11 rejected or flagged");
   assert.equal(typeof button.icon, "function");
 
-  harness.state.decisions.push({ name: "rewrite", count: 3 }, { name: "bypass", count: 2 }, { name: "error", count: 1 });
+  harness.state.decisions.push({ name: "rewrite", count: 3 }, { name: "bypass", count: 2 }, { name: "error", count: 1 }, { name: "context", count: 5 }, { name: "filter", count: 2 });
   await harness.poll();
   assertStatus(button, "11", "11 rejected or flagged");
 

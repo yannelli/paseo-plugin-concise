@@ -16,10 +16,10 @@ export function Card({ theme, children }: { theme: PluginTheme; children: ReactN
   return <View style={{ backgroundColor: theme.colors.surface1, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 8, padding: 12, gap: 10, minWidth: 0 }}>{children}</View>;
 }
 
-export function Button({ theme, label, onPress, disabled = false, primary = false }: {
-  theme: PluginTheme; label: string; onPress: () => void; disabled?: boolean; primary?: boolean;
+export function Button({ theme, label, onPress, disabled = false, primary = false, accessibilityLabel = label }: {
+  theme: PluginTheme; label: string; onPress: () => void; disabled?: boolean; primary?: boolean; accessibilityLabel?: string;
 }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
+  return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
     style={({ pressed }) => ({ minHeight: 32, justifyContent: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, minWidth: 0, flexShrink: 1,
       borderWidth: 1, borderColor: primary ? theme.colors.accent : theme.colors.border,
       backgroundColor: primary ? theme.colors.accent : theme.colors.surface1, opacity: disabled ? 0.45 : pressed ? 0.7 : 1 })}>
@@ -39,23 +39,60 @@ export function Chips({ theme, items, value, onChange }: {
   </Pressable>)}</Row>;
 }
 
-export function Field({ theme, label, value, onChange, multiline = false, placeholder }: {
+export function MultiChips({ theme, label, items, value, onChange }: {
+  theme: PluginTheme; label: string; items: { value: string; label: string }[]; value: string[]; onChange: (value: string[]) => void;
+}) {
+  return <Row>{items.map((item) => {
+    const selected = value.includes(item.value);
+    return <Pressable key={item.value} accessibilityRole="checkbox" accessibilityLabel={`${label}: ${item.label}`} accessibilityState={{ checked: selected }}
+      onPress={() => onChange(selected ? value.filter((entry) => entry !== item.value) : [...value, item.value])}
+      style={{ minHeight: 30, justifyContent: "center", paddingHorizontal: 9, borderRadius: 6, borderWidth: 1,
+        borderColor: selected ? theme.colors.accent : theme.colors.border, backgroundColor: selected ? theme.colors.surface2 : theme.colors.surface0 }}>
+      <Text style={{ color: selected ? theme.colors.foreground : theme.colors.foregroundMuted, fontWeight: selected ? "600" : "400", fontSize: 12 }}>{item.label}</Text>
+    </Pressable>;
+  })}</Row>;
+}
+
+export function Heading({ theme, title, description }: { theme: PluginTheme; title: string; description?: string }) {
+  return <View style={{ gap: 2, paddingTop: 4, minWidth: 0 }}>
+    <Text accessibilityRole="header" style={{ color: theme.colors.foreground, fontSize: 14, fontWeight: "600" }}>{title}</Text>
+    {!!description && <Label theme={theme} muted size={12}>{description}</Label>}
+  </View>;
+}
+
+export function Notice({ theme, tone = "info", children }: { theme: PluginTheme; tone?: "info" | "warning" | "danger" | "success"; children: ReactNode }) {
+  const color = { info: theme.colors.accent, warning: theme.colors.statusWarning, danger: theme.colors.statusDanger, success: theme.colors.statusSuccess }[tone];
+  return <View accessibilityRole={tone === "danger" ? "alert" : undefined} style={{ borderLeftWidth: 3, borderColor: color, backgroundColor: theme.colors.surface2,
+    borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8, gap: 4, minWidth: 0 }}>
+    {typeof children === "string" ? <Label theme={theme} size={12}>{children}</Label> : children}
+  </View>;
+}
+
+export function Badge({ theme, label, color = theme.colors.foregroundMuted }: { theme: PluginTheme; label: string; color?: string }) {
+  return <View style={{ borderWidth: 1, borderColor: color, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, flexShrink: 0 }}>
+    <Text style={{ color, fontSize: 10, fontWeight: "600" }}>{label}</Text>
+  </View>;
+}
+
+export function Field({ theme, label, value, onChange, multiline = false, placeholder, onSubmit, monospace = multiline, hideLabel = false }: {
   theme: PluginTheme; label: string; value: string; onChange: (value: string) => void; multiline?: boolean; placeholder?: string;
+  onSubmit?: () => void; monospace?: boolean; hideLabel?: boolean;
 }) {
   return <View style={{ gap: 6, minWidth: 0 }}>
-    <Label theme={theme} muted>{label}</Label>
-    <TextInput accessibilityLabel={label} value={value} onChangeText={onChange} multiline={multiline}
+    {!hideLabel && <Label theme={theme} muted>{label}</Label>}
+    <TextInput accessibilityLabel={label} value={value} onChangeText={onChange} multiline={multiline} onSubmitEditing={onSubmit}
       autoCapitalize="none" autoCorrect={false} placeholder={placeholder} placeholderTextColor={theme.colors.foregroundMuted}
       style={{ color: theme.colors.foreground, backgroundColor: theme.colors.surface0, borderColor: theme.colors.border,
         borderWidth: 1, borderRadius: 6, padding: 9, fontSize: 13, minWidth: 0, minHeight: multiline ? 140 : 34,
-        textAlignVertical: multiline ? "top" : "center", fontFamily: multiline ? "monospace" : undefined }} />
+        textAlignVertical: multiline ? "top" : "center", fontFamily: monospace ? "monospace" : undefined }} />
   </View>;
 }
 
 export function decisionColor(theme: PluginTheme, decision: string) {
   if (["deny", "block", "error"].includes(decision)) return theme.colors.statusDanger;
   if (["ask", "flag"].includes(decision)) return theme.colors.statusWarning;
-  if (["rewrite", "bypass"].includes(decision)) return theme.colors.accent;
+  if (["rewrite", "bypass", "filter"].includes(decision)) return theme.colors.accent;
+  if (decision === "context") return theme.colors.foregroundMuted;
   return theme.colors.statusSuccess;
 }
 

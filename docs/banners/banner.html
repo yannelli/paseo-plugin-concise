@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Be Concise banner</title>
+<style>
+@font-face {
+  font-family: Geist;
+  src: url('../promo-codex/assets/geist.woff2') format('woff2');
+  font-weight: 100 900;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('../promo-codex/assets/geist-mono.woff2') format('woff2');
+  font-weight: 100 900;
+}
+:root {
+  --charcoal: #18191d;
+  --cream: #faf7f2;
+  --orange: #ff4a24;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  position: relative;
+  width: 960px;
+  height: 540px;
+  overflow: hidden;
+  background: var(--charcoal);
+  color: var(--cream);
+  font-family: Geist, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.glow-top, .glow-bottom, .mark {
+  position: absolute;
+  pointer-events: none;
+}
+.glow-top {
+  inset: 0;
+  background: radial-gradient(400px 162px at 50% 0, rgba(250, 247, 242, .07), rgba(250, 247, 242, 0));
+}
+.glow-bottom {
+  inset: 0;
+  background: radial-gradient(300px 200px at 50% calc(100% + 10px),
+    rgba(255, 74, 36, .64) 0%, rgba(255, 74, 36, .51) 22%, rgba(255, 74, 36, .26) 53%,
+    rgba(255, 74, 36, .15) 69%, rgba(255, 74, 36, .055) 84%, rgba(255, 74, 36, 0) 100%);
+}
+.mark {
+  left: 30px;
+  top: 37px;
+  width: 900.2px;
+  height: 613.8px;
+  fill: rgba(250, 247, 242, .058);
+}
+.mark rect { fill: rgba(255, 74, 36, .2); }
+.brand {
+  position: absolute;
+  top: 28.5px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  height: 15px;
+}
+.brand svg {
+  width: 22px;
+  height: 15px;
+  fill: var(--cream);
+  flex: none;
+}
+.brand svg rect { fill: var(--orange); }
+.brand span {
+  font-size: 18px;
+  font-weight: 560;
+  letter-spacing: -.15px;
+  line-height: 12.5px;
+  color: rgba(250, 247, 242, .91);
+  white-space: nowrap;
+}
+h1 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: -2.6px;
+  line-height: 51px;
+  color: var(--cream);
+}
+h1 span { display: block; }
+h1 em { font-style: normal; color: var(--orange); }
+.card {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(250, 247, 242, .14), 0 16px 60px rgba(0, 0, 0, .6);
+}
+.card img {
+  position: absolute;
+  display: block;
+  max-width: none;
+}
+.card .fade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0) calc(100% - var(--fade-right) - 3.5px), #fff calc(100% - 3.5px)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0) calc(100% - var(--fade-bottom) - 2px), #fff calc(100% - 2px));
+}
+.card .outline {
+  position: absolute;
+  border-radius: 5px;
+  background: rgba(255, 74, 36, .22);
+  box-shadow: inset 0 0 0 1.5px var(--orange);
+}
+.repo {
+  position: absolute;
+  left: 24px;
+  top: 497px;
+  width: 245px;
+  height: 25px;
+  border: 1px solid rgba(250, 247, 242, .11);
+  border-radius: 999px;
+  background: rgba(250, 247, 242, .07);
+}
+.repo svg {
+  position: absolute;
+  left: 8px;
+  top: 5px;
+  width: 14px;
+  height: 14px;
+  fill: rgba(250, 247, 242, .91);
+}
+.repo span {
+  position: absolute;
+  left: 29px;
+  top: 0;
+  line-height: 23px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11.5px;
+  color: rgba(250, 247, 242, .76);
+  white-space: nowrap;
+}
+</style>
+</head>
+<body>
+<div class="glow-top"></div>
+<div class="glow-bottom"></div>
+<svg class="mark" viewBox="160 272 704 480" aria-hidden="true">
+  <path d="M160 272h260c34 0 58 12 82 36l136 140c14 15 32 24 52 24v80c-46 0-84-16-114-47L438 364c-6-6-14-10-22-10H160Z"/>
+  <path d="M160 752h260c34 0 58-12 82-36l136-140c14-15 32-24 52-24v-80c-46 0-84 16-114 47L438 660c-6 6-14 10-22 10H160Z"/>
+  <path d="M160 460h530v104H160Z"/>
+  <rect width="136" height="104" x="728" y="460" rx="22"/>
+</svg>
+<header class="brand">
+  <svg viewBox="160 272 704 480" aria-hidden="true">
+    <path d="M160 272h260c34 0 58 12 82 36l136 140c14 15 32 24 52 24v80c-46 0-84-16-114-47L438 364c-6-6-14-10-22-10H160Z"/>
+    <path d="M160 752h260c34 0 58-12 82-36l136-140c14-15 32-24 52-24v-80c-46 0-84 16-114 47L438 660c-6 6-14 10-22 10H160Z"/>
+    <path d="M160 460h530v104H160Z"/>
+    <rect width="136" height="104" x="728" y="460" rx="22"/>
+  </svg>
+  <span>Be Concise</span>
+</header>
+<h1 id="headline"></h1>
+<main id="stage"></main>
+<footer class="repo">
+  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+  <span>yannelli/paseo-plugin-concise</span>
+</footer>
+<script>
+// The first headline line has its cap top at 68px; the second line is one line height lower.
+const CAP_TOP = 68;
+
+function headline(lines) {
+  const h1 = document.getElementById('headline');
+  h1.innerHTML = lines.map((line) => `<span>${line}</span>`).join('');
+  const style = getComputedStyle(h1);
+  const context = document.createElement('canvas').getContext('2d');
+  context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const metrics = context.measureText('H');
+  const ascent = metrics.fontBoundingBoxAscent;
+  const halfLeading = (parseFloat(style.lineHeight) - ascent - metrics.fontBoundingBoxDescent) / 2;
+  h1.style.top = `${CAP_TOP - (halfLeading + ascent - metrics.actualBoundingBoxAscent)}px`;
+}
+
+function card({ src, captureWidth, crop, scale, left, top, fade = {}, outline, alt }) {
+  const [x, y, width, height] = crop;
+  const figure = document.createElement('figure');
+  figure.className = 'card';
+  Object.assign(figure.style, {
+    margin: 0,
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width * scale}px`,
+    height: `${height * scale}px`,
+  });
+  figure.style.setProperty('--fade-right', `${fade.right ?? 0}px`);
+  figure.style.setProperty('--fade-bottom', `${fade.bottom ?? 0}px`);
+  const image = new Image();
+  image.src = src;
+  image.alt = alt;
+  Object.assign(image.style, {
+    width: `${captureWidth * scale}px`,
+    left: `${-x * scale}px`,
+    top: `${-y * scale}px`,
+  });
+  figure.append(image);
+  if (fade.right || fade.bottom) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fade';
+    figure.append(overlay);
+  }
+  if (outline) {
+    const [ox, oy, ow, oh] = outline;
+    const box = document.createElement('div');
+    box.className = 'outline';
+    Object.assign(box.style, {
+      left: `${(ox - x) * scale}px`,
+      top: `${(oy - y) * scale}px`,
+      width: `${ow * scale}px`,
+      height: `${oh * scale}px`,
+    });
+    figure.append(box);
+  }
+  return figure;
+}
+
+window.renderBanner = async (spec) => {
+  await Promise.all(['800 52px Geist', '560 18px Geist', '400 12px "Geist Mono"'].map((font) => document.fonts.load(font)));
+  headline(spec.headline);
+  const stage = document.getElementById('stage');
+  stage.replaceChildren(...spec.cards.map(card));
+  await document.fonts.ready;
+  await Promise.all([...document.images].map((image) => image.decode()));
+  const h1 = document.getElementById('headline').getBoundingClientRect();
+  return {
+    fonts: document.fonts.check('800 52px Geist') && document.fonts.check('400 12px "Geist Mono"'),
+    headline: { top: h1.top, bottom: h1.bottom, width: document.getElementById('headline').scrollWidth },
+    cards: [...stage.children].map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+    }),
+  };
+};
+</script>
+</body>
+</html>

@@ -51,6 +51,20 @@ export const preview = defineRpc({
   input: TargetSchema.extend({ kind: z.enum(["Write", "apply_patch", "Bash", "Stop"]), text: z.string().max(65536), path: z.string().max(1024) }),
   output: z.object({ json: z.string() }),
 });
+export const TuneKindSchema = z.enum(["docs", "reply", "commit", "gh", "comments"]);
+export type TuneKind = z.infer<typeof TuneKindSchema>;
+export const TuneResultSchema = z.object({
+  kind: TuneKindSchema, samples: z.number(), words: z.number(), delta: ObjectSchema,
+  evidence: z.array(z.object({ key: z.string(), value: z.unknown(), reason: z.string(), examples: z.array(z.string()) })),
+  kept: z.array(z.object({ category: z.string(), reason: z.string() })),
+  insufficient: z.array(z.object({ pack: z.string(), words: z.number(), minWords: z.number() })),
+});
+export type TuneResult = z.infer<typeof TuneResultSchema>;
+export const tune = defineRpc({
+  name: "concise.tune",
+  input: TargetSchema.extend({ kind: TuneKindSchema, texts: z.array(z.string().min(1).max(65536)).min(1).max(20), preset: z.string().max(64).optional() }),
+  output: TuneResultSchema,
+});
 export const HostIdSchema = z.enum(["claude", "codex"]);
 export type HostId = z.infer<typeof HostIdSchema>;
 export const ReleaseSchema = z.object({ version: z.string(), tag: z.string(), name: z.string(), publishedAt: z.string(), url: z.string() });
