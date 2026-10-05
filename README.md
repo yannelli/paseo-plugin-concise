@@ -65,9 +65,11 @@ All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app in lig
 Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. Paseo supplies all runtime dependencies.
 
 ```sh
-paseo plugin add yannelli/paseo-plugin-concise
+paseo plugin add npm:@yannelli/paseo-be-concise
 paseo plugin ls
 ```
+
+To install from GitHub instead, run `paseo plugin add yannelli/paseo-plugin-concise`.
 
 For local development:
 
@@ -108,11 +110,11 @@ Tests use Node.js 24 and temporary home/project directories. They cover activity
 
 Paseo API reference: [v0.9 plugins](https://paseo.sh/docs/plugins/v0.9/reference).
 
-See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, and the be-concise installer commands. Consult it when you change pill labels, update screenshots, or change install behavior.
+See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, change install behavior, or change the release workflow.
 
 ## Releases
 
-GitHub Actions runs the checks and publishes a GitHub release on qualifying pushes to `main`. The first release is `v0.1.0`. The workflow updates `package.json` and `package-lock.json`, pushes an annotated tag, and publishes release notes. It uses the repository's `GITHUB_TOKEN`; no extra secrets or npm publication are required.
+GitHub Actions runs the checks and publishes a GitHub release on qualifying pushes to `main`. The first release is `v0.1.0`. The workflow updates `package.json` and `package-lock.json`, pushes an annotated tag, and publishes release notes with the repository's `GITHUB_TOKEN`. It then publishes [`@yannelli/paseo-be-concise`](https://www.npmjs.com/package/@yannelli/paseo-be-concise) to npm through trusted publishing, or with the `NPM_TOKEN` secret when no trusted publisher is set. See [npm publishing](docs/npm-publishing.md) for the package contents and the trusted publisher setup.
 
 Use Conventional Commits in commits and squash-merge titles:
 
@@ -125,6 +127,6 @@ Use Conventional Commits in commits and squash-merge titles:
 
 The highest change since the last release determines the next version. For example, `fix: repair the badge` changes `0.1.0` to `0.1.1`; `feat: add a filter` changes it to `0.2.0`.
 
-Run `npm run release:dry-run` from a clean `main` checkout with all tags fetched to preview the next release. Rerun the **Release** workflow to complete a publication interrupted after its tag was pushed.
+Run `npm run release:dry-run` from a clean `main` checkout with all tags fetched to preview the next release. Rerun the **Release** workflow to complete a GitHub or npm publication interrupted after its tag was pushed.
 
 Questions or feedback? Please reach out to me at [Ryan Yannelli](https://ryanyannelli.com) or open an issue/PR.
