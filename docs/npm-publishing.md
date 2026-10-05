@@ -18,7 +18,7 @@ The **Publish npm package** step reads the name and version from `package.json`.
 
 ## Authentication
 
-npm CLI 11.5.1 or newer on Node.js 22.14.0 or newer tries [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC) first. Without a trusted publisher on the package, it uses `NODE_AUTH_TOKEN`, which the step reads from the `NPM_TOKEN` repository secret. The current token is a granular token scoped to `@yannelli` that expires on 2027-01-03.
+npm CLI 11.5.1 or newer on Node.js 22.14.0 or newer tries [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC) first. Without a trusted publisher on the package, it uses `NODE_AUTH_TOKEN`, which the step reads from the `NPM_TOKEN` repository secret. The current token is a granular token scoped to `@yannelli` that bypasses 2FA and expires on 2027-01-03. [From January 2027](https://github.blog/changelog/2026-07-31-restricting-npm-bypass-2fa-granular-access-tokens/), npm blocks direct publish with 2FA-bypass tokens, so token-based releases stop then. Set up the trusted publisher before that date.
 
 `npm trust` rejects tokens that bypass 2FA, and the package must exist on npm. To add the trusted publisher, sign in with 2FA and run:
 
