@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { access, constants, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { access, constants, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, delimiter, join, resolve, sep } from "node:path";
+import { basename, delimiter, dirname, join, resolve } from "node:path";
 import type { HostId, HostStatus, InstallerStatus } from "../shared/contracts.ts";
 import { compareVersions } from "../shared/versions.ts";
 
@@ -10,11 +10,11 @@ type Environment = Record<string, string | undefined>;
 type JsonObject = Record<string, unknown>;
 type Release = InstallerStatus["releases"][number];
 type HostState = { tag: string; previous?: string; updatedAt: string };
-type State = { hosts: Partial<Record<HostId, HostState>> };
-type Host = HostStatus & { binary: string | null };
+type State = { hosts: Partial<Record<HostId, HostState>>; retired: Record<string, string> };
+type Host = HostStatus & { binary: string | null; tag: string | null };
 type Job = NonNullable<InstallerStatus["job"]>;
 export type RunResult = { code: number; stdout: string; stderr: string };
-export type Run = (command: string, args: string[], options: { env: Environment }) => Promise<RunResult>;
+export type Run = (command: string, args: string[], options: { env: Environment; signal?: AbortSignal }) => Promise<RunResult>;
 export type FetchJson = (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 export type ApplyInput = { host: HostId; action: "install" | "remove"; version?: string; switchSource?: boolean };
 
@@ -26,6 +26,7 @@ const PLUGIN = "concise@be-concise";
 const MINIMUM = "0.7.0";
 const TAG = /^v\d+\.\d+\.\d+$/;
 const CACHE_MS = 10 * 60 * 1000;
+const RETAIN_MS = 7 * 24 * 60 * 60 * 1000;
 const HOSTS: HostId[] = ["claude", "codex"];
 const LABELS: Record<HostId, string> = { claude: "Claude Code", codex: "Codex" };
 const NOTICES: Record<HostId, string> = {
@@ -37,6 +38,7 @@ const object = (value: unknown): value is JsonObject => value !== null && typeof
 const list = (value: unknown): JsonObject[] => Array.isArray(value) ? value.filter(object) : [];
 const text = (value: unknown): string => typeof value === "string" ? value : "";
 const failure = (error: unknown) => error instanceof Error ? error.message : String(error);
+const canonical = (path: string) => realpath(path).catch(() => resolve(path));
 const lastLine = (value: string) => value.trim().split("\n").filter((line) => line.trim() && !line.startsWith("WARNING")).at(-1) ?? "";
 
 export function dataDirectory(env: Environment): string {
@@ -50,11 +52,12 @@ export async function readState(env: Environment): Promise<State> {
   try {
     const value: unknown = JSON.parse(await readFile(statePath(env), "utf8"));
     const hosts = object(value) && object(value.hosts) ? value.hosts : {};
+    const retired = object(value) && object(value.retired) ? value.retired : {};
     return { hosts: Object.fromEntries(HOSTS.flatMap((id) => {
       const entry = hosts[id];
       return object(entry) && TAG.test(text(entry.tag)) ? [[id, { tag: text(entry.tag), previous: TAG.test(text(entry.previous)) ? text(entry.previous) : undefined, updatedAt: text(entry.updatedAt) }]] : [];
-    })) };
-  } catch { return { hosts: {} }; }
+    })), retired: Object.fromEntries(Object.entries(retired).flatMap(([tag, since]) => TAG.test(tag) && typeof since === "string" ? [[tag, since]] : [])) };
+  } catch { return { hosts: {}, retired: {} }; }
 }
 
 async function writeState(env: Environment, state: State) {
@@ -72,7 +75,7 @@ export async function managedRoot(env: Environment): Promise<string | null> {
 export async function locate(name: string, env: Environment): Promise<string | null> {
   const home = env.HOME || env.USERPROFILE || homedir();
   for (const directory of [...(env.PATH || "").split(delimiter).filter(Boolean), join(home, ".local/bin")]) {
-    const file = join(directory, name);
+    const file = join(directory, process.platform === "win32" ? `${name}.exe` : name);
     try {
       await access(file, constants.X_OK);
       if ((await stat(file)).isFile()) return file;
@@ -81,8 +84,8 @@ export async function locate(name: string, env: Environment): Promise<string | n
   return null;
 }
 
-export const runCommand: Run = (command, args, { env }) => new Promise((done, fail) => {
-  execFile(command, args, { env: { ...env, GIT_TERMINAL_PROMPT: "0" }, timeout: 180_000, maxBuffer: 8 * 1024 * 1024, encoding: "utf8" }, (error, stdout, stderr) => {
+export const runCommand: Run = (command, args, { env, signal }) => new Promise((done, fail) => {
+  execFile(command, args, { env: { ...env, GIT_TERMINAL_PROMPT: "0" }, signal, timeout: 180_000, maxBuffer: 8 * 1024 * 1024, encoding: "utf8" }, (error, stdout, stderr) => {
     if (error && typeof error.code === "string") fail(new Error(`${basename(command)} failed: ${error.message}`));
     else done({ code: error ? Number(error.code ?? 1) || 1 : 0, stdout, stderr: error?.killed ? `${stderr}\nTimed out after 180 seconds.` : stderr });
   });
@@ -108,10 +111,11 @@ async function validate(root: string, version: string) {
   await Promise.all(["web/configuration.mjs", "web/hub.mjs", "web/testing/runner.mjs"].map((file) => stat(join(root, "plugins/concise", file))));
 }
 
-export function createInstaller({ env = process.env, run = runCommand, fetchJson = fetch as FetchJson, onChange = async () => {} }: {
-  env?: Environment; run?: Run; fetchJson?: FetchJson; onChange?: () => Promise<void> | void;
+export function createInstaller({ env = process.env, run = runCommand, fetchJson = fetch as FetchJson, onChange = async () => {}, now = Date.now }: {
+  env?: Environment; run?: Run; fetchJson?: FetchJson; onChange?: () => Promise<void> | void; now?: () => number;
 } = {}) {
   const releasesRoot = releasesDirectory(env);
+  const stopping = new AbortController();
   let cache: { at: number; releases: Release[]; error: string | null } = { at: 0, releases: [], error: null };
   let queue: Promise<unknown> = Promise.resolve();
   let closed = false;
@@ -126,7 +130,7 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
   }
 
   async function cli(binary: string, args: string[]): Promise<unknown> {
-    const result = await run(binary, [...args, "--json"], { env });
+    const result = await run(binary, [...args, "--json"], { env, signal: stopping.signal });
     const value = parseJson(result.stdout);
     if (result.code === 0 && (!object(value) || value.outcome === undefined || value.outcome === "ok")) return value;
     const reason = object(value) && typeof value.message === "string" ? value.message : lastLine(result.stderr) || lastLine(result.stdout);
@@ -136,7 +140,7 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
   async function releases(refresh = false): Promise<Release[]> {
     if (!refresh && cache.at && Date.now() - cache.at < CACHE_MS) return cache.releases;
     try {
-      const response = await fetchJson(RELEASES_URL, { headers: { accept: "application/vnd.github+json", "user-agent": "paseo-be-concise" }, signal: AbortSignal.timeout(15_000) });
+      const response = await fetchJson(RELEASES_URL, { headers: { accept: "application/vnd.github+json", "user-agent": "paseo-be-concise" }, signal: AbortSignal.any([stopping.signal, AbortSignal.timeout(15_000)]) });
       if (!response.ok) throw new Error(`GitHub releases returned HTTP ${response.status}.`);
       const body = await response.json();
       if (!Array.isArray(body)) throw new Error("GitHub releases returned an unexpected response.");
@@ -150,25 +154,29 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     return cache.releases;
   }
 
-  const managedTag = (source: string | null) => {
-    if (!source || !resolve(source).startsWith(releasesRoot + sep)) return null;
-    const tag = basename(resolve(source));
-    return TAG.test(tag) ? tag : null;
-  };
+  // Codex reports marketplace paths with symlinks resolved.
+  async function managedTag(source: string | null): Promise<string | null> {
+    if (!source) return null;
+    const [root, target] = await Promise.all([canonical(releasesRoot), canonical(source)]);
+    return dirname(target) === root && TAG.test(basename(target)) ? basename(target) : null;
+  }
 
   async function host(id: HostId): Promise<Host> {
-    const base: Host = { id, label: LABELS[id], available: false, version: null, enabled: false, source: null, managed: false, error: null, binary: null };
+    const base: Host = { id, label: LABELS[id], available: false, version: null, enabled: false, source: null, managed: false, error: null, binary: null, tag: null };
     const binary = await locate(id, env);
     if (!binary) return { ...base, error: `${id} was not found on the daemon PATH.` };
     try {
       const [plugins, marketplaces] = await Promise.all([cli(binary, ["plugin", "list"]), cli(binary, ["plugin", "marketplace", "list"])]);
+      const expected = id === "claude" ? Array.isArray : object;
+      if (!expected(plugins) || !expected(marketplaces)) throw new Error(`${id} plugin list --json returned output that is not the expected JSON.`);
       const plugin = id === "claude"
         ? list(plugins).find((entry) => entry.id === PLUGIN && entry.scope === "user")
         : list(object(plugins) ? plugins.installed : []).find((entry) => entry.pluginId === PLUGIN && entry.installed !== false);
       const marketplace = list(id === "claude" ? marketplaces : object(marketplaces) ? marketplaces.marketplaces : []).find((entry) => entry.name === MARKETPLACE);
       const origin = object(marketplace?.marketplaceSource) ? marketplace.marketplaceSource.source : undefined;
       const source = marketplace ? text(id === "claude" ? marketplace.path || marketplace.repo || marketplace.url || marketplace.installLocation : origin || marketplace.root) || null : null;
-      return { ...base, binary, available: true, version: text(plugin?.version) || null, enabled: plugin?.enabled !== false && Boolean(plugin), source, managed: Boolean(managedTag(source)) };
+      const tag = await managedTag(source);
+      return { ...base, binary, available: true, version: text(plugin?.version) || null, enabled: plugin?.enabled !== false && Boolean(plugin), source, managed: Boolean(tag), tag };
     } catch (error) {
       return { ...base, binary, available: true, error: failure(error) };
     }
@@ -178,7 +186,7 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     const state = await readState(env);
     let changed = false;
     for (const entry of hosts.filter((item) => item.available && !item.error)) {
-      const tag = managedTag(entry.source);
+      const { tag } = entry;
       const current = state.hosts[entry.id];
       if (tag === (current?.tag ?? null)) continue;
       changed = true;
@@ -194,9 +202,10 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
   async function report(refresh = false): Promise<InstallerStatus> {
     const [found, hosts] = await Promise.all([releases(refresh), Promise.all(HOSTS.map(host))]);
     await reconcile(hosts);
+    await prune();
     last = {
       repository: REPOSITORY, directory: releasesRoot, releases: found, releasesError: cache.error,
-      checkedAt: new Date().toISOString(), hosts: hosts.map(({ binary: _binary, ...entry }) => entry), job: null,
+      checkedAt: new Date().toISOString(), hosts: hosts.map(({ binary: _binary, tag: _tag, ...entry }) => entry), job: null,
     };
     return withJob(last);
   }
@@ -214,7 +223,7 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     await mkdir(releasesRoot, { recursive: true });
     const staging = join(releasesRoot, `.staging-${randomUUID()}`);
     try {
-      const result = await run(git, ["-c", "advice.detachedHead=false", "clone", "--quiet", "--depth", "1", "--branch", release.tag, "--", CLONE_URL, staging], { env });
+      const result = await run(git, ["-c", "advice.detachedHead=false", "clone", "--quiet", "--depth", "1", "--branch", release.tag, "--", CLONE_URL, staging], { env, signal: stopping.signal });
       if (result.code !== 0) throw new Error(`git clone ${release.tag} failed: ${lastLine(result.stderr) || `exit ${result.code}`}`);
       await validate(staging, release.version);
       await rm(join(staging, ".git"), { recursive: true, force: true });
@@ -224,11 +233,17 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     } finally { await rm(staging, { recursive: true, force: true }); }
   }
 
-  async function prune(state: State) {
+  // Claude Code sessions load the plugin from the release folder, so an unused folder stays for RETAIN_MS.
+  async function prune() {
+    const state = await readState(env);
     const keep = new Set(Object.values(state.hosts).flatMap((entry) => [entry.tag, entry.previous]));
-    for (const name of await readdir(releasesRoot).catch(() => [] as string[])) {
-      if (TAG.test(name) && !keep.has(name)) await rm(join(releasesRoot, name), { recursive: true, force: true });
+    const retired: Record<string, string> = {};
+    for (const name of (await readdir(releasesRoot).catch(() => [] as string[])).filter((entry) => TAG.test(entry) && !keep.has(entry)).sort()) {
+      const since = state.retired[name] ?? new Date(now()).toISOString();
+      if (now() - Date.parse(since) < RETAIN_MS) retired[name] = since;
+      else await rm(join(releasesRoot, name), { recursive: true, force: true });
     }
+    if (JSON.stringify(retired) !== JSON.stringify(state.retired)) await writeState(env, { ...state, retired });
   }
 
   async function install(id: HostId, version: string | undefined, switchSource: boolean): Promise<string> {
@@ -241,23 +256,35 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
       throw new Error(`${LABELS[id]} reads be-concise from ${current.source}. Choose Switch to GitHub releases to replace that marketplace source.`);
     }
     const directory = await stage(release);
-    if (id === "claude") {
-      await cli(current.binary, ["plugin", "marketplace", "add", directory]);
-      await cli(current.binary, ["plugin", "marketplace", "update", MARKETPLACE]);
-      await cli(current.binary, ["plugin", current.version ? "update" : "install", PLUGIN, "--scope", "user"]);
-    } else {
-      if (current.source && current.source !== directory) await cli(current.binary, ["plugin", "marketplace", "remove", MARKETPLACE]);
-      if (current.source !== directory) await cli(current.binary, ["plugin", "marketplace", "add", directory]);
-      await cli(current.binary, ["plugin", "add", PLUGIN]);
+    const { binary } = current;
+    const external = current.source && !current.managed ? current.source : null;
+    const pointed = current.tag === release.tag;
+    try {
+      if (id === "claude") {
+        await cli(binary, ["plugin", "marketplace", "add", directory]);
+        await cli(binary, ["plugin", "marketplace", "update", MARKETPLACE]);
+        await cli(binary, ["plugin", current.version ? "update" : "install", PLUGIN, "--scope", "user"]);
+      } else {
+        if (current.source && !pointed) await cli(binary, ["plugin", "marketplace", "remove", MARKETPLACE]);
+        if (!pointed) await cli(binary, ["plugin", "marketplace", "add", directory]);
+        await cli(binary, ["plugin", "add", PLUGIN]);
+      }
+    } catch (error) {
+      if (!external) throw error;
+      const restore = async () => {
+        if (id === "codex") await cli(binary, ["plugin", "marketplace", "remove", MARKETPLACE]).catch(() => {});
+        await cli(binary, ["plugin", "marketplace", "add", external]);
+      };
+      const restored = await restore().then(() => true, () => false);
+      throw new Error(`${failure(error)} ${restored ? "The marketplace source was restored to" : "The marketplace source before this change was"} ${external}.`);
     }
     const state = await readState(env);
     const previous = state.hosts[id];
     state.hosts[id] = { tag: release.tag, previous: previous?.tag === release.tag ? previous.previous : previous?.tag, updatedAt: new Date().toISOString() };
     await writeState(env, state);
-    await prune(state);
     await onChange();
     const verb = !current.version ? "Installed" : compareVersions(release.version, current.version) > 0 ? "Updated to" : compareVersions(release.version, current.version) < 0 ? "Downgraded to" : "Reinstalled";
-    const switched = current.source && !current.managed ? ` Previous marketplace source: ${current.source}.` : "";
+    const switched = external ? ` Previous marketplace source: ${external}.` : "";
     return `${verb} be-concise ${release.version} for ${LABELS[id]}. ${NOTICES[id]}${switched}`;
   }
 
@@ -294,6 +321,7 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     apply: (input: ApplyInput) => closed ? Promise.reject(new Error("The plugin is stopping. Reopen it after reload.")) : start(input),
     async close() {
       closed = true;
+      stopping.abort();
       await queue.catch(() => {});
     },
   };

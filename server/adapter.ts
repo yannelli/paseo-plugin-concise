@@ -89,9 +89,12 @@ export function createBackend(env: Environment = process.env) {
   let runtime: Runtime | null = null;
   let loading: Promise<Runtime | null> | null = null;
   let previews: Promise<unknown> = Promise.resolve();
+  let resets: Promise<unknown> = Promise.resolve();
   let closed = false;
 
   async function connect(): Promise<Runtime | null> {
+    if (closed) throw new Error("The plugin is stopping. Reopen it after reload.");
+    await resets;
     if (closed) throw new Error("The plugin is stopping. Reopen it after reload.");
     if (runtime) return runtime;
     if (!loading) loading = (async () => {
@@ -170,21 +173,27 @@ export function createBackend(env: Environment = process.env) {
     return operation;
   }
 
-  async function reset() {
-    if (closed) return;
-    await loading?.catch(() => {});
-    const previous = runtime;
-    runtime = null;
-    if (!previous) return;
-    previous.hub.close();
-    activity.clear();
-    await Promise.allSettled([...saves.values(), previews]);
-    await previous.runner.disposeTests();
+  // connect waits for resets, so a new runtime cannot share a runner that is being disposed.
+  function reset() {
+    const operation = resets.then(async () => {
+      if (closed) return;
+      await loading?.catch(() => {});
+      const previous = runtime;
+      runtime = null;
+      if (!previous) return;
+      previous.hub.close();
+      activity.clear();
+      await Promise.allSettled([...saves.values(), previews]);
+      await previous.runner.disposeTests();
+    });
+    resets = operation.catch(() => {});
+    return operation;
   }
 
   async function close() {
     if (closed) return;
     closed = true;
+    await resets;
     await loading?.catch(() => {});
     runtime?.hub.close();
     await Promise.allSettled([...saves.values(), previews]);

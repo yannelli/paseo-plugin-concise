@@ -84,8 +84,8 @@ export function Installer({ theme, compact }: { theme: PluginTheme; compact: boo
         </Row>}
         {mutation.isError && mutation.variables?.host === host.id && <Label theme={theme}>Failed: {mutation.error.message}</Label>}
         {job?.host === host.id && job.running && <Label theme={theme} muted>Working… Downloads and host commands can take a minute.</Label>}
-        {job?.host === host.id && job.error && <Label theme={theme}>Failed: {job.error}</Label>}
-        {job?.host === host.id && job.message && <Label theme={theme}>{job.message}</Label>}
+        {job?.host === host.id && job.error && !mutation.isError && <Label theme={theme}>Failed: {job.error}</Label>}
+        {job?.host === host.id && job.message && !mutation.isError && <Label theme={theme}>{job.message}</Label>}
       </Card>;
     })}
     <Label theme={theme} muted size={11}>Releases are stored in {query.data.directory}. Claude Code changes use user scope.</Label>
