@@ -4,6 +4,8 @@ import { isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ActivityStore, activityStats, RETAINED } from "./activity.ts";
 import type { Configuration } from "../shared/contracts.ts";
+import { compareVersions as compare } from "../shared/versions.ts";
+import { managedRoot } from "./installer.ts";
 
 type Environment = Record<string, string | undefined>;
 type Project = { key: string; name: string; cwd: string; lastSeen: string };
@@ -36,16 +38,27 @@ export function visibleEnvironment(env: Environment): Record<string, string> {
   }));
 }
 
-const numbers = (version: string) => version.replace(/^v/, "").split(".").map(Number);
-const compare = (a: string, b: string) => {
-  const left = numbers(a), right = numbers(b);
-  return left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
-};
+type Installation = { root: string; version: string };
 
-export async function discoverInstallation(env: Environment): Promise<{ root: string; version: string } | null> {
+async function inspect(candidate: string): Promise<Installation | null> {
+  for (const manifest of [".claude-plugin/plugin.json", ".codex-plugin/plugin.json", "plugin.json"]) {
+    try {
+      const { name, version } = JSON.parse(await readFile(join(candidate, manifest), "utf8"));
+      if (name !== "concise" || typeof version !== "string" || !/^v?\d+\.\d+\.\d+$/.test(version) || compare(version, "0.7.0") < 0) continue;
+      await Promise.all(["web/configuration.mjs", "web/hub.mjs", "web/testing/runner.mjs"].map((file) => stat(join(candidate, file))));
+      return { root: await realpath(candidate), version };
+    } catch {}
+  }
+  return null;
+}
+
+export async function discoverInstallation(env: Environment): Promise<Installation | null> {
   const candidates: string[] = [];
   if (env.PASEO_CONCISE_ROOT) candidates.push(resolve(env.PASEO_CONCISE_ROOT), resolve(env.PASEO_CONCISE_ROOT, "plugins/concise"));
   else {
+    const managed = await managedRoot(env);
+    const preferred = managed ? await inspect(managed) : null;
+    if (preferred) return preferred;
     const home = env.HOME || env.USERPROFILE || homedir();
     const caches = [join(env.CODEX_HOME || join(home, ".codex"), "plugins/cache/be-concise/concise"),
       join(env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "plugins/cache/be-concise/concise")];
@@ -53,18 +66,8 @@ export async function discoverInstallation(env: Environment): Promise<{ root: st
       try { candidates.push(...(await readdir(cache)).map((name) => join(cache, name))); } catch {}
     }));
   }
-  const found = await Promise.all(candidates.map(async (candidate) => {
-    for (const manifest of [".claude-plugin/plugin.json", ".codex-plugin/plugin.json", "plugin.json"]) {
-      try {
-        const { name, version } = JSON.parse(await readFile(join(candidate, manifest), "utf8"));
-        if (name !== "concise" || typeof version !== "string" || !/^v?\d+\.\d+\.\d+$/.test(version) || compare(version, "0.7.0") < 0) continue;
-        await Promise.all(["web/configuration.mjs", "web/hub.mjs", "web/testing/runner.mjs"].map((file) => stat(join(candidate, file))));
-        return { root: await realpath(candidate), version };
-      } catch {}
-    }
-    return null;
-  }));
-  return found.filter((value): value is { root: string; version: string } => value !== null).sort((a, b) => compare(b.version, a.version))[0] || null;
+  const found = await Promise.all(candidates.map(inspect));
+  return found.filter((value): value is Installation => value !== null).sort((a, b) => compare(b.version, a.version))[0] || null;
 }
 
 async function target(cwd: string): Promise<string> {
@@ -86,9 +89,12 @@ export function createBackend(env: Environment = process.env) {
   let runtime: Runtime | null = null;
   let loading: Promise<Runtime | null> | null = null;
   let previews: Promise<unknown> = Promise.resolve();
+  let resets: Promise<unknown> = Promise.resolve();
   let closed = false;
 
   async function connect(): Promise<Runtime | null> {
+    if (closed) throw new Error("The plugin is stopping. Reopen it after reload.");
+    await resets;
     if (closed) throw new Error("The plugin is stopping. Reopen it after reload.");
     if (runtime) return runtime;
     if (!loading) loading = (async () => {
@@ -167,9 +173,27 @@ export function createBackend(env: Environment = process.env) {
     return operation;
   }
 
+  // connect waits for resets, so a new runtime cannot share a runner that is being disposed.
+  function reset() {
+    const operation = resets.then(async () => {
+      if (closed) return;
+      await loading?.catch(() => {});
+      const previous = runtime;
+      runtime = null;
+      if (!previous) return;
+      previous.hub.close();
+      activity.clear();
+      await Promise.allSettled([...saves.values(), previews]);
+      await previous.runner.disposeTests();
+    });
+    resets = operation.catch(() => {});
+    return operation;
+  }
+
   async function close() {
     if (closed) return;
     closed = true;
+    await resets;
     await loading?.catch(() => {});
     runtime?.hub.close();
     await Promise.allSettled([...saves.values(), previews]);
@@ -178,5 +202,5 @@ export function createBackend(env: Environment = process.env) {
     runtime = null;
   }
 
-  return { getSnapshot, getEventDetail, getConfiguration, saveConfiguration, runPreview, close };
+  return { getSnapshot, getEventDetail, getConfiguration, saveConfiguration, runPreview, reset, close };
 }

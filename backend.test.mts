@@ -124,6 +124,29 @@ test("discovery respects configured cache homes and rejects older installations"
   assert.equal(found!.version, "0.7.1");
 });
 
+test("the newest managed release wins discovery and reset reloads the runtime", async (t) => {
+  const { root, home } = await fixture(t);
+  const data = join(root, "data");
+  const env = { HOME: home, XDG_DATA_HOME: data, CLAUDE_CONFIG_DIR: join(root, "claude") };
+  await fakeInstallation(join(root, "claude/plugins/cache/be-concise/concise/0.8.2"), "0.8.2");
+  const releases = join(data, "paseo-be-concise/releases");
+  await fakeInstallation(join(releases, "v0.8.1/plugins/concise"), "0.8.1");
+  await fakeInstallation(join(releases, "v0.8.2/plugins/concise"), "0.8.2");
+  const select = (claude: string, codex: string) => writeFile(join(data, "paseo-be-concise/state.json"), JSON.stringify({ hosts: {
+    claude: { tag: claude, updatedAt: "2026-10-05T02:00:00.000Z" }, codex: { tag: codex, updatedAt: "2026-10-05T01:00:00.000Z" },
+  } }));
+  await select("v0.8.2", "v0.8.1");
+  const backend = createBackend(env);
+  t.after(backend.close);
+  assert.equal((await backend.getSnapshot()).version, "0.8.2");
+  await select("v0.8.1", "v0.8.2");
+  assert.equal((await backend.getSnapshot()).version, "0.8.2");
+  await backend.reset();
+  const reloaded = await backend.getSnapshot();
+  assert.equal(reloaded.version, "0.8.1");
+  assert.equal(reloaded.root, await realpath(join(releases, "v0.8.1/plugins/concise")));
+});
+
 test("project filtering resolves directory aliases", async (t) => {
   const { root, cwd } = await fixture(t);
   const alias = join(root, "alias");

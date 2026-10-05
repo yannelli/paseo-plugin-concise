@@ -6,6 +6,7 @@ import { snapshot } from "../shared/contracts";
 import { Activity } from "./activity";
 import { BrandIcon } from "./brand";
 import { ConfigurationEditor } from "./configuration";
+import { Installer } from "./installer";
 import { Playground } from "./playground";
 import { Button, Card, Chips, Label, Row } from "./ui";
 
@@ -51,7 +52,7 @@ function Dashboard({ theme, layout, cwd }: Props) {
         </View>
       </Row>
       <View style={{ flexDirection: compact ? "column" : "row", flexWrap: "wrap", gap: 8, justifyContent: "space-between", minWidth: 0 }}>
-        <Chips theme={theme} value={tab} onChange={setTab} items={[{ value: "activity", label: "Activity" }, { value: "configuration", label: compact ? "Config" : "Configuration" }, { value: "playground", label: compact ? "Preview" : "Playground" }]} />
+        <Chips theme={theme} value={tab} onChange={setTab} items={[{ value: "activity", label: "Activity" }, { value: "configuration", label: compact ? "Config" : "Configuration" }, { value: "playground", label: compact ? "Preview" : "Playground" }, { value: "plugin", label: "Plugin" }]} />
         {!cwd && <Button theme={theme} label={`${name} ${projectsOpen ? "−" : "+"}`} onPress={() => setProjectsOpen(!projectsOpen)} />}
         {cwd && <Text numberOfLines={1} style={{ color: theme.colors.foregroundMuted, fontSize: 11, minWidth: 0, flexShrink: 1, alignSelf: compact ? "flex-start" : "center" }}>{name}</Text>}
       </View>
@@ -71,15 +72,17 @@ function Dashboard({ theme, layout, cwd }: Props) {
       <Label theme={theme} muted>{data.message}</Label>
       <Button theme={theme} label="Check again" onPress={() => void query.refetch()} />
     </Card>}
+    {data && !data.connected && <Installer theme={theme} compact={compact} />}
     {data?.connected && <>
       {tab === "activity" && <Activity key={selected} theme={theme} compact={compact} events={data.events} stats={data.stats}
         paused={Boolean(paused)} onPause={() => setPaused(paused ? null : data)} />}
-      {tab !== "activity" && !selected && <Card theme={theme}>
+      {(tab === "configuration" || tab === "playground") && !selected && <Card theme={theme}>
         <Label theme={theme} size={18}>Choose a project</Label><Label theme={theme} muted>Configuration and previews use the selected project’s settings.</Label>
         <Button theme={theme} label="Choose project" onPress={() => setProjectsOpen(true)} />
       </Card>}
       {tab === "configuration" && selected && <ConfigurationEditor key={selected} cwd={selected} theme={theme} compact={compact} />}
       {tab === "playground" && selected && <Playground key={selected} cwd={selected} theme={theme} compact={compact} />}
+      {tab === "plugin" && <Installer theme={theme} compact={compact} />}
       <View style={{ borderTopWidth: 1, borderColor: theme.colors.border, paddingTop: 10, gap: 3 }}>
         <Label theme={theme} muted size={11}>be-concise {data.version} · Updated {new Date(data.updatedAt).toLocaleTimeString()}</Label>
         <Label theme={theme} muted size={11}>Last {data.retainedLimit} records per project · Requires monitor.persist in each agent.</Label>

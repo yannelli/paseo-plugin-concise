@@ -16,7 +16,7 @@ test("server entry registers RPCs and releases each backend on cleanup", async (
   const first = start();
   try {
     assert.deepEqual([...first.handlers.keys()].sort(), [
-      "concise.config.read", "concise.config.write", "concise.event", "concise.preview", "concise.snapshot",
+      "concise.config.read", "concise.config.write", "concise.event", "concise.installer.apply", "concise.installer.status", "concise.preview", "concise.snapshot",
     ]);
     const read = first.handlers.get(snapshot.name)!;
     const before = snapshot.output.parse(await read({}));
