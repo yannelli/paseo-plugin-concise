@@ -1,6 +1,5 @@
 {
-  "name": "paseo-be-concise",
-  "private": true,
+  "name": "@yannelli/paseo-be-concise",
   "version": "2.2.0",
   "description": "Live be-concise activity, configuration, and hook previews inside Paseo",
   "license": "MIT",
@@ -11,6 +10,18 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yannelli/paseo-plugin-concise.git"
+  },
+  "files": [
+    "paseo-plugin.json",
+    "index.client.tsx",
+    "index.server.ts",
+    "client/",
+    "server/",
+    "shared/"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
