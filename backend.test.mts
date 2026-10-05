@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { ActivityStore, activityStats, normalizeEvent } from "./server/activity.ts";
 import { createBackend, discoverInstallation, visibleEnvironment } from "./server/adapter.ts";
+import { compareVersions } from "./shared/versions.ts";
 
 const record = (extra: Record<string, unknown> = {}) => ({
   cwd: "/project", hook: "check-edit", ts: "2026-09-05T10:30:00.000Z", decision: "allow",
@@ -68,12 +69,26 @@ test("stats count interventions, sessions, durations, and thirty minute buckets"
   assert.equal(activityStats([]).averageMs, 0);
 });
 
+test("injected session rules count as context while config warnings stay flagged", () => {
+  const lifecycle = (response: Record<string, unknown>, decision = "flag") => normalizeEvent(record({
+    hook: "session-context", event: "SessionStart", decision, request: { hook_event_name: "SessionStart", session_id: "s" }, response,
+  }), "id")!.event;
+  const rules = lifecycle({ hookSpecificOutput: { additionalContext: "[concise] Active rules:" } });
+  assert.equal(rules.decision, "context");
+  assert.equal(rules.tool, "SessionStart");
+  assert.equal(lifecycle({ systemMessage: "[concise] config problem", hookSpecificOutput: { additionalContext: "rules" } }).decision, "flag");
+  assert.equal(lifecycle({}, "bypass").decision, "bypass");
+  assert.equal(normalizeEvent(record({ decision: "flag", response: { systemMessage: "kept" } }), "id")!.event.decision, "flag");
+  assert.equal(activityStats([rules]).interventions, 0);
+});
+
 test("environment output includes valid supported flags and excludes arbitrary values", () => {
   assert.deepEqual(visibleEnvironment({
     BEC_MONITOR_PERSIST: "0", BEC_FEATURE_ALWAYS_ENABLE: "aiWriting,comments", BEC_LOG_MAX_SIZE: "5m",
     BEC_CONFIG_JSON: '{"secret":"hidden"}', BEC_CONFIG_PATH: "/private/path", BEC_API_KEY: "secret",
     BEC_LOG_ENABLED: "secret", BEC_FEATURE_DISABLE: "api-token", BEC_ALLOW_PHRASES: "private phrase",
   }), { BEC_MONITOR_PERSIST: "0", BEC_FEATURE_ALWAYS_ENABLE: "aiWriting,comments", BEC_LOG_MAX_SIZE: "5m" });
+  assert.deepEqual(visibleEnvironment({ BEC_FEATURE_ENABLE: "dictionary,emDash" }), { BEC_FEATURE_ENABLE: "dictionary,emDash" });
 });
 
 async function fixture(t: test.TestContext) {
@@ -204,4 +219,51 @@ test("preview isolates sessions and leaves pasted commands and project files une
   await backend.runPreview({ cwd, kind: "Bash", path: "", text: "npm test && touch paseo-preview-marker" });
   await assert.rejects(stat(join(cwd, "paseo-preview-marker")), { code: "ENOENT" });
   assert.equal((await backend.getSnapshot()).events.length, 0);
+});
+
+test("the tuner requires be-concise 0.10.0 and proposes settings from pasted samples", async (t) => {
+  const { root, cwd, env } = await fixture(t);
+  await fakeInstallation(join(root, "missing"), "0.9.0");
+  const older = createBackend(env);
+  t.after(older.close);
+  await assert.rejects(older.runTune({ cwd, kind: "docs", texts: ["Text."] }), /requires be-concise 0\.10\.0 or newer\. This host has 0\.9\.0/);
+  const installed = await discoverInstallation(process.env);
+  if (!installed || compareVersions(installed.version, "0.10.0") < 0) return t.skip("be-concise >=0.10.0 is required for tuner coverage");
+  const backend = createBackend({ ...env, PASEO_CONCISE_ROOT: installed.root });
+  t.after(backend.close);
+  const sample = "The parser reads each file \u2014 then it writes the index. ".repeat(40);
+  const result = await backend.runTune({ cwd, kind: "docs", texts: [sample, sample] });
+  assert.equal(result.samples, 2);
+  assert.ok(result.words > 300);
+  assert.ok(result.evidence.every((item) => typeof item.key === "string" && typeof item.reason === "string"));
+  assert.equal(typeof result.delta, "object");
+  await assert.rejects(stat(join(cwd, ".claude/concise.json")), { code: "ENOENT" });
+  await assert.rejects(backend.runTune({ cwd, kind: "essay" as "docs", texts: ["Text."] }), /^Error: unknown kind "essay"/);
+});
+
+test("settings written by the 0.10 controls pass upstream validation and name the bad entry", async (t) => {
+  const installed = await discoverInstallation(process.env);
+  if (!installed || compareVersions(installed.version, "0.10.0") < 0) return t.skip("be-concise >=0.10.0 is required for 0.10 settings coverage");
+  const { cwd, env } = await fixture(t);
+  env.PASEO_CONCISE_ROOT = installed.root;
+  const backend = createBackend(env);
+  t.after(backend.close);
+  const layer = {
+    context: { perTurn: true }, subagentStop: { exemptAgentTypes: ["Explore"] }, testFilter: { codexPostToolUse: true },
+    features: { dictionary: { mode: "deny", entries: [
+      { id: "blacklist", match: "exact", value: "blacklist", fix: "denylist" },
+      { id: "ticket", match: "regex", value: "\\bJIRA-\\d+\\b", fix: "link the ticket", flags: "i", scopes: ["commit"] },
+    ] } },
+    ignoreGlobs: ["**/dist/**"], allowList: { phrases: ["load-bearing"] }, log: { rotate: "daily", maxSize: "1m", maxFiles: 2 },
+  };
+  const saved = await backend.saveConfiguration({ cwd, id: "project-claude", text: JSON.stringify(layer), revision: null });
+  const effective = saved.effective as typeof layer & { problems: unknown[] };
+  assert.equal(effective.context.perTurn, true);
+  assert.deepEqual(effective.subagentStop.exemptAgentTypes, ["Explore"]);
+  assert.deepEqual(effective.features.dictionary.entries.map(({ id }) => id), ["blacklist", "ticket"]);
+  assert.deepEqual(effective.ignoreGlobs, ["**/dist/**"]);
+  assert.deepEqual(effective.problems, []);
+  const revision = saved.layers.find(({ id }) => id === "project-claude")!.revision;
+  const broken = { features: { dictionary: { entries: [{ id: "ok", match: "exact", value: "a", fix: "b" }, { id: "bad", match: "regex", value: "(", fix: "c" }] } } };
+  await assert.rejects(backend.saveConfiguration({ cwd, id: "project-claude", text: JSON.stringify(broken), revision }), /features\.dictionary\.entries\[1\]: value does not compile/);
 });

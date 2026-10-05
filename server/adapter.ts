@@ -1,9 +1,10 @@
+import { spawn } from "node:child_process";
 import { readFile, readdir, realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ActivityStore, activityStats, RETAINED } from "./activity.ts";
-import type { Configuration } from "../shared/contracts.ts";
+import type { Configuration, TuneKind, TuneResult } from "../shared/contracts.ts";
 import { compareVersions as compare } from "../shared/versions.ts";
 import { managedRoot } from "./installer.ts";
 
@@ -12,6 +13,7 @@ type Project = { key: string; name: string; cwd: string; lastSeen: string };
 type Hub = { list(): Project[]; close(): void };
 type SaveInput = { cwd: string; id: string; text: string; revision: string | null };
 type PreviewInput = { cwd: string; kind: "Write" | "apply_patch" | "Bash" | "Stop"; text: string; path: string };
+type TuneInput = { cwd: string; kind: TuneKind; texts: string[]; preset?: string };
 type ConfigurationModule = {
   configuration(cwd: string, env: Environment): Configuration;
   saveConfiguration(cwd: string, env: Environment, input: Omit<SaveInput, "cwd">): void;
@@ -30,7 +32,7 @@ export function visibleEnvironment(env: Environment): Record<string, string> {
     if (typeof value !== "string" || value.length > 200) return false;
     if (BOOLEAN_FLAGS.has(key)) return /^(1|0|true|false|yes|no|on|off)$/i.test(value.trim());
     if (["BEC_FEATURE_ENABLE", "BEC_FEATURE_DISABLE", "BEC_FEATURE_ALWAYS_ENABLE", "BEC_FEATURE_ALWAYS_DISABLE"].includes(key)) {
-      return value.split(",").every((id) => ["emDash", "aiWriting", "comments", "fileSize", "prBody", "stopHook"].includes(id.trim()));
+      return value.split(",").every((id) => ["emDash", "aiWriting", "dictionary", "comments", "fileSize", "prBody", "stopHook"].includes(id.trim()));
     }
     if (key === "BEC_LOG_MAX_SIZE") return /^\d+(?:\.\d+)?\s*[bkmg]?b?$/i.test(value.trim());
     if (key === "BEC_LOG_MAX_FILES") return /^\d+$/.test(value);
@@ -77,6 +79,30 @@ async function target(cwd: string): Promise<string> {
     if ((await stat(canonical)).isDirectory()) return canonical;
   } catch {}
   throw new Error("The project folder does not exist on this host.");
+}
+
+const TUNE_SCRIPT = `import { readFileSync } from "node:fs";
+const { url, options } = JSON.parse(readFileSync(0, "utf8"));
+const { tune } = await import(url);
+process.stdout.write(JSON.stringify(await tune(options)));`;
+const OUTPUT_LIMIT = 8 * 1024 * 1024;
+
+// Project pattern packs are JavaScript, so the tuner loads them in a child process.
+function runTuner(input: unknown, cwd: string, env: Environment): Promise<TuneResult> {
+  return new Promise((resolveResult, reject) => {
+    const child = spawn(process.execPath, ["--input-type=module", "-e", TUNE_SCRIPT], { cwd, env, stdio: ["pipe", "pipe", "pipe"], timeout: 60_000 });
+    const output: Buffer[] = [];
+    let size = 0;
+    let errors = "";
+    child.stdout.on("data", (chunk: Buffer) => { size += chunk.length; if (size > OUTPUT_LIMIT) child.kill(); else output.push(chunk); });
+    child.stderr.on("data", (chunk: Buffer) => { errors = `${errors}${chunk}`.slice(-4096); });
+    child.on("error", reject);
+    child.on("close", (code, signal) => {
+      if (code !== 0) return reject(new Error(/^\w*Error: (.+)$/m.exec(errors)?.[1] ?? `The tuner stopped (${signal ?? code}).`));
+      try { resolveResult(JSON.parse(Buffer.concat(output).toString("utf8"))); } catch { reject(new Error("The tuner returned invalid output.")); }
+    });
+    child.stdin.end(JSON.stringify(input));
+  });
 }
 
 const projectEnvironment = (env: Environment, cwd: string): Environment => ({ ...env,
@@ -173,6 +199,15 @@ export function createBackend(env: Environment = process.env) {
     return operation;
   }
 
+  async function runTune(input: TuneInput) {
+    const active = await requireRuntime();
+    const cwd = await target(input.cwd);
+    if (compare(active.version, "0.10.0") < 0) throw new Error(`The writing tuner requires be-concise 0.10.0 or newer. This host has ${active.version}.`);
+    const samples = input.texts.map((text, index) => ({ name: `Sample ${index + 1}`, text }));
+    const options = { samples, kind: input.kind, cwd, config: configuration(active, cwd).effective, preset: input.preset || undefined };
+    return runTuner({ url: pathToFileURL(join(active.root, "tools/tune.mjs")).href, options }, cwd, projectEnvironment(env, cwd));
+  }
+
   // connect waits for resets, so a new runtime cannot share a runner that is being disposed.
   function reset() {
     const operation = resets.then(async () => {
@@ -202,5 +237,5 @@ export function createBackend(env: Environment = process.env) {
     runtime = null;
   }
 
-  return { getSnapshot, getEventDetail, getConfiguration, saveConfiguration, runPreview, reset, close };
+  return { getSnapshot, getEventDetail, getConfiguration, saveConfiguration, runPreview, runTune, reset, close };
 }

@@ -24,6 +24,7 @@ const decisionGroups = [
   { label: "rejected", names: ["deny", "block"], decision: "deny" },
   { label: "flagged", names: ["ask", "flag"], decision: "flag" },
   { label: "rewritten", names: ["rewrite"], decision: "rewrite" },
+  { label: "filtered", names: ["filter"], decision: "filter" },
   { label: "bypassed", names: ["bypass"], decision: "bypass" },
   { label: "errors", names: ["error"], decision: "error" },
 ];

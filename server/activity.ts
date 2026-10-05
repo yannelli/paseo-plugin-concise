@@ -26,6 +26,9 @@ export function normalizeEvent(value: unknown, id: string, now = Date.now()): { 
   const output = object(response.hookSpecificOutput);
   const date = typeof record.ts === "string" ? Date.parse(record.ts) : NaN;
   const duration = typeof record.durationMs === "number" && Number.isFinite(record.durationMs) ? Math.max(0, record.durationMs) : 0;
+  const decision = text(record.decision, 40) || "unknown";
+  // be-concise 0.10 logs injected session rules as "flag"; a systemMessage there carries config warnings.
+  const context = record.hook === "session-context" && decision === "flag" && !response.systemMessage;
   return {
     cwd,
     event: {
@@ -33,7 +36,7 @@ export function normalizeEvent(value: unknown, id: string, now = Date.now()): { 
       project: text(record.project, 64) || createHash("sha256").update(cwd).digest("hex"),
       projectName: text(record.projectName, 100) || basename(cwd),
       hook: text(record.hook, 80), tool: text(record.tool || request.tool_name || record.event, 80),
-      decision: text(record.decision, 40) || "unknown",
+      decision: context ? "context" : decision,
       session: text(record.session || request.session_id, 160), durationMs: duration,
       target: text(input.file_path || input.path || input.command || record.path, 180),
       summary: text(record.error || output.permissionDecisionReason || response.reason || response.systemMessage || output.additionalContext, 280),
