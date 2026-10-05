@@ -9,6 +9,7 @@ A native companion to [be-concise](https://github.com/yannelli/be-concise) for C
 - Call counts, interventions, sessions, average hook duration, and a 30-minute activity chart.
 - User and project configuration with threshold controls, check switches, writing presets, an advanced JSON editor, and test filter settings.
 - An isolated playground for file writes, Codex patches, shell commands, and final replies. Previews inspect hook responses without executing the pasted command or writing the target file.
+- A Plugin tab that installs, updates, downgrades, and removes be-concise for Claude Code and Codex from the be-concise GitHub releases.
 
 ## Screenshots
 
@@ -83,13 +84,17 @@ Plugins must be enabled in Paseo Settings → Plugins. Installation runs trusted
 
 The plugin detects installed be-concise versions in the Claude and Codex caches, respecting `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. For a source checkout or custom installation, set `PASEO_CONCISE_ROOT` in the daemon environment to the repository or `plugins/concise` directory, then reload this plugin.
 
+### Install be-concise from Paseo
+
+Open **Be concise → Plugin**, or use the panel that appears when be-concise is missing. Choose a release and press **Install**, **Update**, or **Downgrade** for Claude Code or Codex. The daemon host needs Git and the `claude` or `codex` CLI on `PATH` or in `~/.local/bin`. The plugin downloads the release from [yannelli/be-concise](https://github.com/yannelli/be-concise/releases) into `~/.local/share/paseo-be-concise/releases` and registers it as the `be-concise` marketplace. Claude Code changes use user scope. Restart Claude Code sessions after a change. For Codex, start a new session and review the hooks with `/hooks`. If the marketplace already uses another source, **Switch to GitHub releases** asks for confirmation before it points the marketplace at the release folder. Changes run in the background, and the tab shows the result when the host commands finish. See [be-concise installer](docs/plugin-installer.md) for the exact commands.
+
 ## Activity and settings
 
 The view refreshes every two seconds. It follows the project registry and saved records under the daemon’s HOME/XDG directories, alongside any running `concise-web` console. It retains up to 500 events per project within a shared 16 MiB budget. Stats describe that retained window; they are not lifetime totals. New activity requires `monitor.persist` to be enabled and `BEC_MONITOR_DISABLED` to be unset in the agent’s environment.
 
 Configuration controls edit the selected file and preserve its other keys. **Save changes** validates through be-concise and checks the file revision. An intervening edit preserves your draft and requires an explicit reload. The effective view uses the daemon’s environment; agent-specific environment overrides apply separately. The interface labels active and inactive layers because creating a higher-priority file changes which configuration is selected.
 
-Each preview starts with separate retry state. Preview results do not enter live activity. The plugin does not modify the Claude or Codex installation or start another web console.
+Each preview starts with separate retry state. Preview results do not enter live activity. Only the Plugin tab changes the Claude or Codex installation, and only when you press one of its buttons. The plugin does not start another web console.
 
 ## Development
 
@@ -103,7 +108,7 @@ Tests use Node.js 24 and temporary home/project directories. They cover activity
 
 Paseo API reference: [v0.9 plugins](https://paseo.sh/docs/plugins/v0.9/reference).
 
-See the [documentation index](docs/INDEX.md) for the current composer button contract and screenshot capture details. Consult it when changing pill labels or updating screenshots.
+See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, and the be-concise installer commands. Consult it when you change pill labels, update screenshots, or change install behavior.
 
 ## Releases
 

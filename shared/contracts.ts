@@ -51,3 +51,29 @@ export const preview = defineRpc({
   input: TargetSchema.extend({ kind: z.enum(["Write", "apply_patch", "Bash", "Stop"]), text: z.string().max(65536), path: z.string().max(1024) }),
   output: z.object({ json: z.string() }),
 });
+export const HostIdSchema = z.enum(["claude", "codex"]);
+export type HostId = z.infer<typeof HostIdSchema>;
+export const ReleaseSchema = z.object({ version: z.string(), tag: z.string(), name: z.string(), publishedAt: z.string(), url: z.string() });
+export const HostSchema = z.object({
+  id: HostIdSchema, label: z.string(), available: z.boolean(), version: z.string().nullable(), enabled: z.boolean(),
+  source: z.string().nullable(), managed: z.boolean(), error: z.string().nullable(),
+});
+export type HostStatus = z.infer<typeof HostSchema>;
+export const InstallActionSchema = z.enum(["install", "remove"]);
+export const JobSchema = z.object({
+  host: HostIdSchema, action: InstallActionSchema, version: z.string().nullable(), running: z.boolean(),
+  message: z.string().nullable(), error: z.string().nullable(),
+});
+export const InstallerSchema = z.object({
+  repository: z.string(), directory: z.string(), releases: z.array(ReleaseSchema),
+  releasesError: z.string().nullable(), checkedAt: z.string(), hosts: z.array(HostSchema), job: JobSchema.nullable(),
+});
+export type InstallerStatus = z.infer<typeof InstallerSchema>;
+export const installerStatus = defineRpc({
+  name: "concise.installer.status", input: z.object({ refresh: z.boolean().optional() }), output: InstallerSchema,
+});
+export const installerApply = defineRpc({
+  name: "concise.installer.apply",
+  input: z.object({ host: HostIdSchema, action: InstallActionSchema, version: z.string().max(32).optional(), switchSource: z.boolean().optional() }),
+  output: InstallerSchema,
+});
