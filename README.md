@@ -2,16 +2,16 @@
 
 # Be concise for Paseo
 
-A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code and Codex. Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer pill shows the rejected and flagged total when enforcement is on and **Off** when disabled. Open it for decision details and the workspace enforcement toggle.
+A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code, Codex, and omp (oh-my-pi). Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer pill shows the rejected and flagged total when enforcement is on and **Off** when disabled. Open it for decision details and the workspace enforcement toggle.
 
-- Live hook decisions, searchable by tool, file, session, project, and reason. Pause the feed or open an event’s request and response.
+- Live hook decisions, searchable by tool, file, session, project, and reason. The project picker groups projects by repository and hides projects whose folder is gone. Pause the feed or open an event’s request and response.
 - A compact composer pill with the Be concise logo and one number. The number combines rejected and flagged decisions; the popup shows each decision count and a 30-minute chart. Turning enforcement off displays **Off** and sets the workspace's `softFail` override; flagged actions are allowed while hooks and test-output filtering remain active. Turn it on to restore enforcement. Agent environment overrides apply separately.
 - Call counts, interventions, sessions, average hook duration, and a 30-minute activity chart.
 - User and project configuration with sections for limits, checks, style, dictionary, exceptions, and logging, plus a JSON view and test filter settings. List controls follow the be-concise merge rule for each key.
 - A dictionary editor for terms to flag, with match rules, fixes, and hook and scope limits. Entries from other files can be turned off or copied in.
 - A writing tuner that scans pasted samples and proposes settings they pass. Apply the proposal to a draft, review it, then save.
-- An isolated playground for file writes, Codex patches, shell commands, and final replies. Previews show the decision, reason, and findings of each hook without executing the pasted command or writing the target file.
-- A Plugin tab that installs, updates, downgrades, and removes be-concise for Claude Code and Codex from the be-concise GitHub releases.
+- An isolated playground for file writes, Codex and omp patches, shell commands, and final replies. Previews show the decision, reason, and findings of each hook without executing the pasted command or writing the target file.
+- A Plugin tab that installs, updates, downgrades, and removes be-concise for Claude Code, Codex, and omp from the be-concise GitHub releases.
 
 ## Screenshots
 
@@ -64,7 +64,7 @@ All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app in lig
 
 ## Install
 
-Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. See [be-concise 0.10 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
+Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. Repository groups and hidden missing projects need 0.11.0. omp needs 0.12.0. Tested with be-concise 0.12.0. See [be-concise 0.10 to 0.12 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
 
 Install the npm release:
 
@@ -77,7 +77,7 @@ paseo plugin ls
 
 Plugins must be enabled in Paseo Settings → Plugins. Installation runs trusted code with the daemon user’s access.
 
-The plugin detects installed be-concise versions in the Claude and Codex caches, respecting `CLAUDE_CONFIG_DIR` and `CODEX_HOME`. For a source checkout or custom installation, set `PASEO_CONCISE_ROOT` in the daemon environment to the repository or `plugins/concise` directory, then reload this plugin.
+The plugin detects installed be-concise versions in the Claude, Codex, and omp caches, respecting `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `XDG_DATA_HOME`. It reads the omp cache in `~/.omp`, in each `~/.omp/profiles/<name>`, and in `$XDG_DATA_HOME/omp`. For a source checkout or custom installation, set `PASEO_CONCISE_ROOT` in the daemon environment to the repository or `plugins/concise` directory, then reload this plugin.
 
 ### Older Paseo versions
 
@@ -103,7 +103,7 @@ paseo plugin ls
 
 ### Install be-concise from Paseo
 
-Open **Be concise → Plugin**, or use the panel that appears when be-concise is missing. Choose a release and press **Install**, **Update**, or **Downgrade** for Claude Code or Codex. The daemon host needs Git and the `claude` or `codex` CLI on `PATH` or in `~/.local/bin`. The plugin downloads the release from [yannelli/be-concise](https://github.com/yannelli/be-concise/releases) into `~/.local/share/paseo-be-concise/releases` and registers it as the `be-concise` marketplace. Claude Code changes use user scope. Restart Claude Code sessions after a change. For Codex, start a new session and review the hooks with `/hooks`. If the marketplace already uses another source, **Switch to GitHub releases** asks for confirmation before it points the marketplace at the release folder. Changes run in the background, and the tab shows the result when the host commands finish. See [be-concise installer](docs/plugin-installer.md) for the exact commands.
+Open **Be concise → Plugin**, or use the panel that appears when be-concise is missing. Choose a release and press **Install**, **Update**, or **Downgrade** for Claude Code, Codex, or omp. The daemon host needs Git and the `claude`, `codex`, or `omp` CLI on `PATH` or in `~/.local/bin`. The plugin downloads the release from [yannelli/be-concise](https://github.com/yannelli/be-concise/releases) into `~/.local/share/paseo-be-concise/releases` and registers it as the `be-concise` marketplace. Claude Code changes use user scope. Restart Claude Code sessions after a change. For Codex, start a new session and review the hooks with `/hooks`. omp copies the plugin into its own cache and loads the hooks at session start, so start a new omp session after a change. omp needs be-concise 0.12.0 or newer, and it does not check subagent replies. If the marketplace already uses another source, **Switch to GitHub releases** asks for confirmation before it points the marketplace at the release folder. Changes run in the background, and the tab shows the result when the host commands finish. See [be-concise installer](docs/plugin-installer.md) for the exact commands.
 
 ## Activity and settings
 
@@ -113,7 +113,7 @@ Configuration controls edit the selected file and preserve its other keys. **Sav
 
 Session rules that be-concise sends at startup appear as **Rules sent** and do not count as flagged. The tuner reads pasted text only and writes nothing until you save.
 
-Each preview starts with separate retry state. Preview results do not enter live activity. Only the Plugin tab changes the Claude or Codex installation, and only when you press one of its buttons. The plugin does not start another web console.
+Each preview starts with separate retry state. Preview results do not enter live activity. Only the Plugin tab changes the Claude Code, Codex, or omp installation, and only when you press one of its buttons. The plugin does not start another web console.
 
 ## Development
 
@@ -123,11 +123,11 @@ paseo plugin reload paseo-be-concise
 paseo plugin logs paseo-be-concise
 ```
 
-Tests use Node.js 24 and temporary home/project directories. They cover activity normalization, retention, stats, installation discovery, config conflicts, file permissions, preview isolation, form and dictionary edits, and the tuner. Integration tests require an installed be-concise; the tuner and dictionary tests need 0.10.0. Set `PASEO_CONCISE_ROOT` to a checkout to select it explicitly.
+Tests use Node.js 24 and temporary home/project directories. They cover activity normalization, retention, stats, installation discovery, config conflicts, file permissions, preview isolation, form and dictionary edits, the tuner, omp records, and the omp installer commands. Integration tests require an installed be-concise; the tuner and dictionary tests need 0.10.0. Set `PASEO_CONCISE_ROOT` to a checkout to select it explicitly.
 
 Paseo API reference: [v0.9 plugins](https://paseo.sh/docs/plugins/v0.9/reference).
 
-See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, be-concise 0.10 support, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, add a configuration control, change install behavior, or change the release workflow.
+See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, be-concise 0.10 to 0.12 support, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, add a configuration control, change install behavior, or change the release workflow.
 
 ## Releases
 

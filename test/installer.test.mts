@@ -3,9 +3,9 @@ import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeF
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import test from "node:test";
-import { createInstaller, managedRoot, readState, type ApplyInput, type FetchJson, type Run, type RunResult } from "../server/installer.ts";
+import { createInstaller, managedRoot, ompRoot, readState, type ApplyInput, type FetchJson, type Run, type RunResult } from "../server/installer.ts";
 
-type FakeHost = { version: string | null; source: string | null };
+type FakeHost = { version: string | null; source: string | null; enabled?: boolean };
 const release = (tag: string, extra: Record<string, unknown> = {}) => ({ tag_name: tag, name: tag, published_at: "2026-09-29T21:58:29Z", html_url: `https://github.com/yannelli/be-concise/releases/tag/${tag}`, ...extra });
 const mutations = (calls: string[][], host: string) => calls.filter(([name]) => name === host).map((call) => call.slice(1).join(" "))
   .filter((call) => call !== "plugin list" && call !== "plugin marketplace list");
@@ -35,10 +35,10 @@ async function writeRelease(root: string, version: string) {
 const DAY = 24 * 60 * 60 * 1000;
 type Options = {
   binaries?: string[]; hosts?: Partial<Record<string, FakeHost>>; cloned?: (tag: string) => string; linked?: boolean;
-  respond?: (call: string) => RunResult | undefined;
+  respond?: (call: string) => RunResult | undefined; releases?: unknown[];
 };
 
-async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "git"], hosts = {}, cloned = (tag) => tag.slice(1), linked = false, respond = () => undefined }: Options = {}) {
+async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "omp", "git"], hosts = {}, cloned = (tag) => tag.slice(1), linked = false, respond = () => undefined, releases: listed = published }: Options = {}) {
   const root = await mkdtemp(join(tmpdir(), "paseo-concise-installer-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const bin = join(root, "bin");
@@ -54,7 +54,15 @@ async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "gi
   }
   const clock = { now: Date.now() };
   const signals: AbortSignal[] = [];
-  const state: Record<string, FakeHost> = { claude: { version: null, source: null }, codex: { version: null, source: null }, ...hosts };
+  const state: Record<string, FakeHost> = { claude: { version: null, source: null }, codex: { version: null, source: null }, omp: { version: null, source: null }, ...hosts };
+  // omp prints marketplaces as text, so the installer reads marketplaces.json from the omp data root.
+  const ompMarketplaces = async () => {
+    const root = await ompRoot(env);
+    await mkdir(root, { recursive: true });
+    const marketplaces = state.omp.source ? [{ name: "be-concise", sourceType: "local", sourceUri: state.omp.source }] : [];
+    await writeFile(join(root, "marketplaces.json"), JSON.stringify({ version: 1, marketplaces }));
+  };
+  if (state.omp.source) await ompMarketplaces();
   const calls: string[][] = [];
   const folderVersion = async (source: string | null) => JSON.parse(await readFile(join(source!, "plugins/concise/.claude-plugin/plugin.json"), "utf8")).version;
   const ok = (value: unknown) => ({ code: 0, stdout: `${JSON.stringify(value)}\n`, stderr: "" });
@@ -72,6 +80,23 @@ async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "gi
     }
     const host = state[name];
     const action = args.slice(1, 3).join(" ");
+    if (name === "omp") {
+      const fail = (message: string) => ({ code: 1, stdout: `✘ ${message}\n`, stderr: "" });
+      if (action === "list --json") return ok({ npm: [], marketplace: host.version ? [{ id: "concise@be-concise", scope: "user",
+        entries: [{ scope: "user", installPath: `/omp/be-concise___concise___${host.version}`, version: host.version, ...(host.enabled === undefined ? {} : { enabled: host.enabled }) }] }] : [] });
+      if (action === "marketplace add") {
+        if (host.source) return fail('Failed to add marketplace: Error: Marketplace "be-concise" already exists');
+        host.source = args[3];
+      }
+      if (action === "marketplace remove") host.source = null;
+      if (action === "install concise@be-concise") {
+        if (host.version && !args.includes("--force")) return fail('Failed to install concise@be-concise: Error: Plugin "concise@be-concise" is already installed. Use force option to reinstall.');
+        host.version = await folderVersion(host.source);
+      }
+      if (action === "uninstall concise@be-concise") host.version = null;
+      await ompMarketplaces();
+      return { code: 0, stdout: "✔ done\n", stderr: "" };
+    }
     if (name === "claude") {
       if (action === "list --json") return ok(host.version ? [{ id: "concise@be-concise", scope: "user", version: host.version, enabled: true }] : []);
       if (action === "marketplace list") return ok(host.source ? [{ name: "be-concise", source: "directory", path: host.source }] : []);
@@ -93,7 +118,7 @@ async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "gi
     if (action === "remove concise@be-concise") host.version = null;
     return ok({});
   };
-  const fetchJson: FetchJson = async () => ({ ok: true, status: 200, json: async () => published });
+  const fetchJson: FetchJson = async () => ({ ok: true, status: 200, json: async () => listed });
   let changes = 0;
   const installer = createInstaller({ env, run, fetchJson, onChange: () => { changes++; }, now: () => clock.now });
   t.after(installer.close);
@@ -106,8 +131,9 @@ test("status lists stable releases at or above 0.7.0 and reports missing host CL
   const status = await installer.getStatus();
   assert.deepEqual(status.releases.map(({ version }) => version), ["0.8.2", "0.8.1", "0.7.1"]);
   assert.equal(status.releasesError, null);
-  assert.deepEqual(status.hosts.map(({ id, available, version }) => [id, available, version]), [["claude", true, null], ["codex", false, null]]);
+  assert.deepEqual(status.hosts.map(({ id, available, version, minimum }) => [id, available, version, minimum]), [["claude", true, null, "0.7.0"], ["codex", false, null, "0.7.0"], ["omp", false, null, "0.12.0"]]);
   assert.match(status.hosts[1].error!, /codex was not found/);
+  assert.match(status.hosts[2].error!, /omp was not found/);
 });
 
 test("install stages each release once, updates, downgrades, and prunes releases unused for 7 days", async (t) => {
@@ -224,4 +250,65 @@ test("remove uninstalls and removes only a managed marketplace", async (t) => {
   assert.deepEqual(state.codex, { version: null, source: external });
   assert.deepEqual(mutations(calls, "codex"), ["plugin remove concise@be-concise"]);
   assert.match((await settle(installer, { host: "codex", action: "remove" })).error!, /not installed for Codex/);
+});
+
+const ompReleases = [release("v0.13.0"), release("v0.12.1"), release("v0.12.0"), release("v0.11.0")];
+
+test("omp installs 0.12.0 or newer, then updates, downgrades, and reinstalls from release folders", async (t) => {
+  const { env, calls, installer, releases, state } = await fixture(t, { releases: ompReleases });
+  assert.match((await settle(installer, { host: "omp", action: "install", version: "0.11.0" })).error!, /omp needs be-concise 0\.12\.0 or newer/);
+  assert.deepEqual(mutations(calls, "omp"), []);
+  assert.equal(calls.filter(([name]) => name === "git").length, 0);
+
+  const first = await settle(installer, { host: "omp", action: "install", version: "0.12.0" });
+  assert.match(first.message, /Installed be-concise 0\.12\.0 for omp\. Start a new omp session to load it\./);
+  assert.deepEqual(mutations(calls, "omp"), [`plugin marketplace add ${join(releases, "v0.12.0")}`, "plugin install concise@be-concise"]);
+  const omp = first.status.hosts.find(({ id }) => id === "omp")!;
+  assert.deepEqual([omp.version, omp.enabled, omp.managed, omp.source], ["0.12.0", true, true, join(releases, "v0.12.0")]);
+  assert.equal((await readState(env)).hosts.omp?.tag, "v0.12.0");
+
+  const before = mutations(calls, "omp").length;
+  assert.match((await settle(installer, { host: "omp", action: "install", version: "0.13.0" })).message, /Updated to be-concise 0\.13\.0 for omp/);
+  assert.deepEqual(mutations(calls, "omp").slice(before), ["plugin marketplace remove be-concise", `plugin marketplace add ${join(releases, "v0.13.0")}`, "plugin install concise@be-concise --force"]);
+  assert.match((await settle(installer, { host: "omp", action: "install", version: "0.12.1" })).message, /Downgraded to be-concise 0\.12\.1 for omp/);
+  assert.equal(state.omp.version, "0.12.1");
+  const reinstall = mutations(calls, "omp").length;
+  assert.match((await settle(installer, { host: "omp", action: "install", version: "0.12.1" })).message, /Reinstalled be-concise 0\.12\.1/);
+  assert.deepEqual(mutations(calls, "omp").slice(reinstall), ["plugin install concise@be-concise --force"]);
+
+  state.omp.enabled = false;
+  assert.equal((await installer.getStatus()).hosts[2].enabled, false);
+  const removed = await settle(installer, { host: "omp", action: "remove" });
+  assert.match(removed.message, /Removed be-concise from omp\. Start a new omp session to unload it\./);
+  assert.deepEqual(mutations(calls, "omp").slice(-2), ["plugin uninstall concise@be-concise", "plugin marketplace remove be-concise"]);
+  assert.deepEqual(state.omp, { version: null, source: null, enabled: false });
+  assert.equal((await readState(env)).hosts.omp, undefined);
+});
+
+test("an omp switch from the GitHub marketplace restores it on failure and remove keeps it", async (t) => {
+  let failing = true;
+  const { calls, installer, state } = await fixture(t, { releases: ompReleases, hosts: { omp: { version: "0.12.0", source: "yannelli/be-concise" } },
+    respond: (call) => failing && call === "omp plugin install concise@be-concise --force" ? { code: 1, stdout: "✘ Failed to install concise@be-concise: Error: copy failed\n", stderr: "" } : undefined });
+  const status = await installer.getStatus();
+  assert.deepEqual([status.hosts[2].source, status.hosts[2].managed], ["yannelli/be-concise", false]);
+  assert.match((await settle(installer, { host: "omp", action: "install", version: "0.13.0" })).error!, /reads be-concise from yannelli\/be-concise/);
+  const failed = await settle(installer, { host: "omp", action: "install", version: "0.13.0", switchSource: true });
+  assert.match(failed.error!, /copy failed.*The marketplace source was restored to yannelli\/be-concise/);
+  assert.deepEqual(state.omp, { version: "0.12.0", source: "yannelli/be-concise" });
+  failing = false;
+  const removed = await settle(installer, { host: "omp", action: "remove" });
+  assert.match(removed.message, /Removed be-concise from omp/);
+  assert.deepEqual(state.omp, { version: null, source: "yannelli/be-concise" });
+  assert.equal(mutations(calls, "omp").at(-1), "plugin uninstall concise@be-concise");
+});
+
+test("the omp data root follows OMP_PROFILE, then an existing XDG_DATA_HOME/omp, then ~/.omp", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "paseo-concise-omp-root-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const home = join(root, "home");
+  const xdg = join(root, "xdg");
+  assert.equal(await ompRoot({ HOME: home, XDG_DATA_HOME: xdg }), join(home, ".omp"));
+  await mkdir(join(xdg, "omp"), { recursive: true });
+  assert.equal(await ompRoot({ HOME: home, XDG_DATA_HOME: xdg }), join(xdg, "omp"));
+  assert.equal(await ompRoot({ HOME: home, XDG_DATA_HOME: xdg, OMP_PROFILE: "work" }), join(home, ".omp/profiles/work"));
 });

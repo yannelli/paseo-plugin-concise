@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { snapshot } from "../shared/contracts";
+import { projectGroups, projectLabel, visibleProjects } from "../shared/projects";
 import { Activity } from "./activity";
 import { BrandIcon } from "./brand";
 import { ConfigurationEditor, type Drafts, hasUnsaved } from "./configuration";
@@ -29,6 +30,7 @@ function Dashboard({ theme, layout, cwd }: Props) {
   const [visited, setVisited] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<Drafts>({});
   const [projectsOpen, setProjectsOpen] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
   const [width, setWidth] = useState<number | null>(null);
   const [paused, setPaused] = useState<Awaited<ReturnType<typeof fetchSnapshot>> | null>(null);
   const compact = layout.compact || (width !== null && width < 560);
@@ -37,6 +39,8 @@ function Dashboard({ theme, layout, cwd }: Props) {
   const data = paused ?? query.data;
   const project = data?.projects.find((item) => item.cwd === selected);
   const name = selected ? project?.name ?? selected.split("/").filter(Boolean).pop() : "All projects";
+  const missing = data?.projects.filter((item) => item.missing).length ?? 0;
+  const groups = projectGroups(visibleProjects(data?.projects ?? [], showMissing, selected));
   const choose = (value: string) => { setSelected(value); setPaused(null); setProjectsOpen(false); };
   const open = (value: string) => { setTab(value); setVisited((current) => current.includes(value) ? current : [...current, value]); };
   const unsaved = hasUnsaved(drafts, selected);
@@ -62,12 +66,16 @@ function Dashboard({ theme, layout, cwd }: Props) {
         {cwd && <Text numberOfLines={1} style={{ color: theme.colors.foregroundMuted, fontSize: 11, minWidth: 0, flexShrink: 1, alignSelf: compact ? "flex-start" : "center" }}>{name}</Text>}
       </View>
       {projectsOpen && <Card theme={theme}>
-        {[{ cwd: "", key: "all", name: "All projects" }, ...(data?.projects ?? [])].map((item) => <Pressable key={item.key}
-          accessibilityRole="button" accessibilityLabel={`Select ${item.name}`} onPress={() => choose(item.cwd)}
-          style={{ padding: 8, gap: 2, borderRadius: 6, minWidth: 0, backgroundColor: item.cwd === selected ? theme.colors.surface2 : theme.colors.surface1 }}>
-          <Label theme={theme}>{item.name}</Label>
-          {!!item.cwd && <Text numberOfLines={1} style={{ color: theme.colors.foregroundMuted, fontSize: 11 }}>{item.cwd}</Text>}
-        </Pressable>)}
+        {[{ id: "all", label: null, projects: [{ cwd: "", key: "all", name: "All projects", lastSeen: "" }] }, ...groups].map((group) => <View key={group.id} style={{ gap: 4, minWidth: 0 }}>
+          {group.label && <Label theme={theme} muted size={11}>{group.label}</Label>}
+          {group.projects.map((item) => <Pressable key={item.key}
+            accessibilityRole="button" accessibilityLabel={`Select ${item.name}`} onPress={() => choose(item.cwd)}
+            style={{ padding: 8, gap: 2, borderRadius: 6, minWidth: 0, backgroundColor: item.cwd === selected ? theme.colors.surface2 : theme.colors.surface1 }}>
+            <Label theme={theme}>{projectLabel(item)}</Label>
+            {!!item.cwd && <Text numberOfLines={1} style={{ color: theme.colors.foregroundMuted, fontSize: 11 }}>{item.cwd}</Text>}
+          </Pressable>)}
+        </View>)}
+        {missing > 0 && <Button theme={theme} label={`${showMissing ? "Hide" : "Show"} ${missing} missing`} onPress={() => setShowMissing(!showMissing)} />}
       </Card>}
     </View>
     {query.isError && <Card theme={theme}><Label theme={theme}>Connection interrupted: {query.error.message}</Label><Button theme={theme} label="Reconnect" onPress={() => void query.refetch()} /></Card>}

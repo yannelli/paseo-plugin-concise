@@ -50,7 +50,7 @@ export function Installer({ theme, compact }: { theme: PluginTheme; compact: boo
   return <View style={{ gap: compact ? 12 : 16 }}>
     <View style={{ gap: 5 }}>
       <Label theme={theme} size={18}>be-concise plugin</Label>
-      <Label theme={theme} muted>Install, update, or remove the Claude Code and Codex plugin from {query.data.repository} GitHub releases.</Label>
+      <Label theme={theme} muted>Install, update, or remove the Claude Code, Codex, and omp plugin from {query.data.repository} GitHub releases.</Label>
     </View>
     <Card theme={theme}>
       <Row>
@@ -66,6 +66,7 @@ export function Installer({ theme, compact }: { theme: PluginTheme; compact: boo
     {hosts.map((host) => {
       const external = Boolean(host.source && !host.managed);
       const confirm = confirming?.host === host.id ? confirming.action : null;
+      const supported = !version || compareVersions(version, host.minimum) >= 0;
       const install = () => mutation.mutate({ host: host.id, action: "install", version, switchSource: external });
       return <Card key={host.id} theme={theme}>
         <View style={{ minWidth: 0 }}>
@@ -74,8 +75,9 @@ export function Installer({ theme, compact }: { theme: PluginTheme; compact: boo
         </View>
         {host.available && !host.error && <Label theme={theme} muted size={12}>Marketplace: {host.source ? `${host.source}${host.managed ? " · GitHub release" : ""}` : "not added"}</Label>}
         {confirm === "switch" && <Label theme={theme}>This replaces the be-concise marketplace source {host.source} with a downloaded GitHub release. The result lists the replaced source.</Label>}
+        {host.available && !host.error && !supported && <Label theme={theme} muted size={12}>{host.label} needs be-concise {host.minimum} or newer. Choose a newer release.</Label>}
         {host.available && !host.error && <Row>
-          {!!version && !confirm && <Button theme={theme} primary={!host.version || external || compareVersions(version, host.version) > 0} disabled={busy}
+          {!!version && supported && !confirm && <Button theme={theme} primary={!host.version || external || compareVersions(version, host.version) > 0} disabled={busy}
             label={actionLabel(host, version)} onPress={() => external ? setConfirming({ host: host.id, action: "switch" }) : install()} />}
           {confirm === "switch" && <Button theme={theme} primary disabled={busy} label={`Confirm switch to ${version}`} onPress={install} />}
           {(host.version || host.managed) && confirm !== "switch" && <Button theme={theme} disabled={busy} label={confirm === "remove" ? "Confirm remove" : "Remove"}
@@ -88,6 +90,6 @@ export function Installer({ theme, compact }: { theme: PluginTheme; compact: boo
         {job?.host === host.id && job.message && !mutation.isError && <Label theme={theme}>{job.message}</Label>}
       </Card>;
     })}
-    <Label theme={theme} muted size={11}>Releases are stored in {query.data.directory}. Claude Code changes use user scope.</Label>
+    <Label theme={theme} muted size={11}>Releases are stored in {query.data.directory}. Claude Code and omp changes use user scope. Start a new omp session after a change.</Label>
   </View>;
 }

@@ -1,6 +1,6 @@
-# be-concise 0.10 support
+# be-concise 0.10 to 0.12 support
 
-Created: 2026-10-05. Last updated: 2026-10-05.
+Created: 2026-10-05. Last updated: 2026-10-07.
 
 This page lists the be-concise settings and tools that this plugin exposes, the oldest version that has each one, and the rules the controls follow. Sources, read on 2026-10-05: the [v0.10.0 release](https://github.com/yannelli/be-concise/releases/tag/v0.10.0), [configuration.md](https://github.com/yannelli/be-concise/blob/v0.10.0/plugins/concise/docs/configuration.md), and [tools.md](https://github.com/yannelli/be-concise/blob/v0.10.0/plugins/concise/docs/tools.md). Read them again before you change a control.
 
@@ -48,7 +48,20 @@ The tuner accepts pasted samples only: up to 20, each up to 64 KiB. It does not 
 
 The composer pill counts `deny`, `block`, `ask`, and `flag`, so injected rules do not raise it.
 
+## 0.11 and 0.12
+
+Sources, read on 2026-10-07: the [v0.10.1](https://github.com/yannelli/be-concise/releases/tag/v0.10.1), [v0.11.0](https://github.com/yannelli/be-concise/releases/tag/v0.11.0), and [v0.12.0](https://github.com/yannelli/be-concise/releases/tag/v0.12.0) releases, the diff from v0.10.0 to v0.12.0, and [host-features.md](https://github.com/yannelli/be-concise/blob/v0.12.0/plugins/concise/docs/host-features.md#omp) at v0.12.0. Neither release adds a configuration key, so the configuration controls do not change.
+
+| Change | Since | Plugin behavior |
+| --- | --- | --- |
+| The project registry stores `repo` (name, root, worktree, subdirectory, or `null`), and the hub reports `missing` when a project folder no longer exists | 0.11.0 | The project picker hides missing projects behind **Show N missing**, groups projects by repository, and names a worktree `<name> (worktree)`, as `concise-web` does. A selected missing project stays listed. Older hubs send neither field, so their projects show as present in one list. |
+| The omp extension `omp/extension.mjs`, listed under `omp.extensions` in `plugins/concise/package.json` | 0.12.0 | The Plugin tab installs it for omp, and discovery reads the omp caches. See [be-concise installer](plugin-installer.md). |
+| omp hook records | 0.12.0 | Records reach the same registry with the tool names `Write`, `Edit`, `Bash`, and `apply_patch`, and omp session IDs. An omp `apply_patch` record carries the patch in `tool_input.input`, where Codex uses `tool_input.command`. The activity target reads both. |
+| Reply checks read `last_assistant_message` and `SubagentHandback` messages | 0.12.0 | No change. Previews still pass the reply text. |
+
+omp has no subagent stop event, so it does not check subagent replies. It reads the same `.claude/concise.json` and `.codex/concise.json` project files. The workspace enforcement toggle writes `.claude/concise.json` for omp agents, and the composer pill appears for the Paseo `omp` provider.
+
 ## Not in this plugin
 
-- The settings CLI, the MCP server, and the `concise-config` and `concise-tune` skills. Agents use them inside Claude Code and Codex.
+- The settings CLI, the MCP server, and the `concise-config` and `concise-tune` skills. Agents use them inside Claude Code, Codex, and omp.
 - Pattern pack management from the be-concise web console.

@@ -20,6 +20,7 @@ test("quick toggle creates a provider-specific project override without editing 
   const before = structuredClone(config);
   assert.deepEqual(enforcementUpdate(config, false, "codex"), { id: "project-codex", revision: null, text: '{\n  "softFail": true\n}\n' });
   assert.equal(enforcementUpdate(config, true, "claude").id, "project-claude");
+  assert.equal(enforcementUpdate(config, false, "omp").id, "project-claude");
   assert.deepEqual(config, before);
 });
 

@@ -27,11 +27,22 @@ const MINIMUM = "0.7.0";
 const TAG = /^v\d+\.\d+\.\d+$/;
 const CACHE_MS = 10 * 60 * 1000;
 const RETAIN_MS = 7 * 24 * 60 * 60 * 1000;
-const HOSTS: HostId[] = ["claude", "codex"];
-const LABELS: Record<HostId, string> = { claude: "Claude Code", codex: "Codex" };
+const HOSTS: HostId[] = ["claude", "codex", "omp"];
+const LABELS: Record<HostId, string> = { claude: "Claude Code", codex: "Codex", omp: "omp" };
+// omp loads omp/extension.mjs, which be-concise added in 0.12.0.
+const MINIMUMS: Record<HostId, string> = { claude: MINIMUM, codex: MINIMUM, omp: "0.12.0" };
 const NOTICES: Record<HostId, string> = {
   claude: "Restart Claude Code sessions to load it.",
   codex: "Start a new Codex session and review the concise hooks with /hooks.",
+  omp: "Start a new omp session to load it.",
+};
+const UNLOADS: Record<HostId, string> = {
+  claude: "Restart Claude Code sessions to unload it.",
+  codex: "Start a new Codex session to unload it.",
+  omp: "Start a new omp session to unload it.",
+};
+const REMOVES: Record<HostId, string[]> = {
+  claude: ["plugin", "uninstall", PLUGIN, "--scope", "user"], codex: ["plugin", "remove", PLUGIN], omp: ["plugin", "uninstall", PLUGIN],
 };
 
 const object = (value: unknown): value is JsonObject => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -47,6 +58,14 @@ export function dataDirectory(env: Environment): string {
 }
 const releasesDirectory = (env: Environment) => join(dataDirectory(env), "releases");
 const statePath = (env: Environment) => join(dataDirectory(env), "state.json");
+
+// A profile wins over XDG_DATA_HOME; XDG_DATA_HOME/omp is used only when it exists (checked with omp 18.7.0).
+export async function ompRoot(env: Environment): Promise<string> {
+  const home = env.HOME || env.USERPROFILE || homedir();
+  if (env.OMP_PROFILE) return join(home, ".omp/profiles", env.OMP_PROFILE);
+  const xdg = env.XDG_DATA_HOME ? join(env.XDG_DATA_HOME, "omp") : null;
+  return xdg && await stat(xdg).then((entry) => entry.isDirectory(), () => false) ? xdg : join(home, ".omp");
+}
 
 export async function readState(env: Environment): Promise<State> {
   try {
@@ -161,20 +180,39 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     return dirname(target) === root && TAG.test(basename(target)) ? basename(target) : null;
   }
 
+  async function cliState(id: HostId, binary: string): Promise<{ plugin?: JsonObject; source: string | null }> {
+    const [plugins, marketplaces] = await Promise.all([cli(binary, ["plugin", "list"]), cli(binary, ["plugin", "marketplace", "list"])]);
+    const expected = id === "claude" ? Array.isArray : object;
+    if (!expected(plugins) || !expected(marketplaces)) throw new Error(`${id} plugin list --json returned output that is not the expected JSON.`);
+    const plugin = id === "claude"
+      ? list(plugins).find((entry) => entry.id === PLUGIN && entry.scope === "user")
+      : list(object(plugins) ? plugins.installed : []).find((entry) => entry.pluginId === PLUGIN && entry.installed !== false);
+    const marketplace = list(id === "claude" ? marketplaces : object(marketplaces) ? marketplaces.marketplaces : []).find((entry) => entry.name === MARKETPLACE);
+    const origin = object(marketplace?.marketplaceSource) ? marketplace.marketplaceSource.source : undefined;
+    return { plugin, source: marketplace ? text(id === "claude" ? marketplace.path || marketplace.repo || marketplace.url || marketplace.installLocation : origin || marketplace.root) || null : null };
+  }
+
+  // omp prints its marketplace list as text, so the sources come from marketplaces.json.
+  async function ompState(binary: string): Promise<{ plugin?: JsonObject; source: string | null }> {
+    const plugins = await cli(binary, ["plugin", "list"]);
+    if (!object(plugins) || !Array.isArray(plugins.marketplace)) throw new Error("omp plugin list --json returned output that is not the expected JSON.");
+    const entries = list(plugins.marketplace).find((entry) => entry.id === PLUGIN)?.entries;
+    const plugin = list(entries).find((entry) => entry.scope === "user");
+    const file = join(await ompRoot(env), "marketplaces.json");
+    let marketplaces: unknown = {};
+    try { marketplaces = JSON.parse(await readFile(file, "utf8")); } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw new Error(`Unable to read ${file}: ${failure(error)}`);
+    }
+    const marketplace = list(object(marketplaces) ? marketplaces.marketplaces : []).find((entry) => entry.name === MARKETPLACE);
+    return { plugin, source: text(marketplace?.sourceUri) || null };
+  }
+
   async function host(id: HostId): Promise<Host> {
-    const base: Host = { id, label: LABELS[id], available: false, version: null, enabled: false, source: null, managed: false, error: null, binary: null, tag: null };
+    const base: Host = { id, label: LABELS[id], available: false, version: null, enabled: false, source: null, managed: false, error: null, minimum: MINIMUMS[id], binary: null, tag: null };
     const binary = await locate(id, env);
     if (!binary) return { ...base, error: `${id} was not found on the daemon PATH.` };
     try {
-      const [plugins, marketplaces] = await Promise.all([cli(binary, ["plugin", "list"]), cli(binary, ["plugin", "marketplace", "list"])]);
-      const expected = id === "claude" ? Array.isArray : object;
-      if (!expected(plugins) || !expected(marketplaces)) throw new Error(`${id} plugin list --json returned output that is not the expected JSON.`);
-      const plugin = id === "claude"
-        ? list(plugins).find((entry) => entry.id === PLUGIN && entry.scope === "user")
-        : list(object(plugins) ? plugins.installed : []).find((entry) => entry.pluginId === PLUGIN && entry.installed !== false);
-      const marketplace = list(id === "claude" ? marketplaces : object(marketplaces) ? marketplaces.marketplaces : []).find((entry) => entry.name === MARKETPLACE);
-      const origin = object(marketplace?.marketplaceSource) ? marketplace.marketplaceSource.source : undefined;
-      const source = marketplace ? text(id === "claude" ? marketplace.path || marketplace.repo || marketplace.url || marketplace.installLocation : origin || marketplace.root) || null : null;
+      const { plugin, source } = id === "omp" ? await ompState(binary) : await cliState(id, binary);
       const tag = await managedTag(source);
       return { ...base, binary, available: true, version: text(plugin?.version) || null, enabled: plugin?.enabled !== false && Boolean(plugin), source, managed: Boolean(tag), tag };
     } catch (error) {
@@ -250,6 +288,7 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     const pick = (found: Release[]) => version ? found.find((item) => item.version === version) : found[0];
     const release = pick(await releases()) ?? pick(await releases(true));
     if (!release) throw new Error(cache.error ?? `${version ? `be-concise ${version}` : "No be-concise version"} is not a published release at or above ${MINIMUM}.`);
+    if (compareVersions(release.version, MINIMUMS[id]) < 0) throw new Error(`${LABELS[id]} needs be-concise ${MINIMUMS[id]} or newer.`);
     const current = await host(id);
     if (!current.binary || current.error) throw new Error(current.error ?? `${LABELS[id]} is unavailable.`);
     if (current.source && !current.managed && !switchSource) {
@@ -267,12 +306,12 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
       } else {
         if (current.source && !pointed) await cli(binary, ["plugin", "marketplace", "remove", MARKETPLACE]);
         if (!pointed) await cli(binary, ["plugin", "marketplace", "add", directory]);
-        await cli(binary, ["plugin", "add", PLUGIN]);
+        await cli(binary, id === "codex" ? ["plugin", "add", PLUGIN] : ["plugin", "install", PLUGIN, ...(current.version ? ["--force"] : [])]);
       }
     } catch (error) {
       if (!external) throw error;
       const restore = async () => {
-        if (id === "codex") await cli(binary, ["plugin", "marketplace", "remove", MARKETPLACE]).catch(() => {});
+        if (id !== "claude") await cli(binary, ["plugin", "marketplace", "remove", MARKETPLACE]).catch(() => {});
         await cli(binary, ["plugin", "marketplace", "add", external]);
       };
       const restored = await restore().then(() => true, () => false);
@@ -292,13 +331,13 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     const current = await host(id);
     if (!current.binary || current.error) throw new Error(current.error ?? `${LABELS[id]} is unavailable.`);
     if (!current.version && !current.managed) throw new Error(`be-concise is not installed for ${LABELS[id]}.`);
-    if (current.version) await cli(current.binary, id === "claude" ? ["plugin", "uninstall", PLUGIN, "--scope", "user"] : ["plugin", "remove", PLUGIN]);
+    if (current.version) await cli(current.binary, REMOVES[id]);
     if (current.managed) await cli(current.binary, ["plugin", "marketplace", "remove", MARKETPLACE]);
     const state = await readState(env);
     delete state.hosts[id];
     await writeState(env, state);
     await onChange();
-    return `Removed be-concise from ${LABELS[id]}. ${id === "claude" ? "Restart Claude Code sessions to unload it." : "Start a new Codex session to unload it."}`;
+    return `Removed be-concise from ${LABELS[id]}. ${UNLOADS[id]}`;
   }
 
   async function start(input: ApplyInput): Promise<InstallerStatus> {

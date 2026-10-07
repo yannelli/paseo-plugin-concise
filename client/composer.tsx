@@ -171,7 +171,7 @@ export function contributeComposer(client: PluginClientContext) {
   }
   function attach(agent: { id: string; workspaceId?: string | null; provider: string; status: string; archivedAt?: string | null }) {
     if (disposed) return;
-    const supported = /claude|codex/i.test(agent.provider);
+    const supported = /claude|codex|\bomp\b/i.test(agent.provider);
     if (!agent.workspaceId || agent.status === "closed" || agent.archivedAt || !supported) return detach(agent.id);
     if (pills.get(agent.id)?.workspaceId === agent.workspaceId) return;
     detach(agent.id);

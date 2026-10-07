@@ -2,7 +2,12 @@ import { defineRpc } from "@getpaseo/plugin";
 import { z } from "zod";
 
 export const ObjectSchema = z.record(z.string(), z.unknown());
-export const ProjectSchema = z.object({ key: z.string(), name: z.string(), cwd: z.string(), lastSeen: z.string() });
+export const RepoSchema = z.object({ name: z.string(), root: z.string(), worktree: z.string().nullable(), subdir: z.string() });
+export const ProjectSchema = z.object({
+  key: z.string(), name: z.string(), cwd: z.string(), lastSeen: z.string(),
+  missing: z.boolean().optional(), repo: RepoSchema.nullable().optional(),
+});
+export type Project = z.infer<typeof ProjectSchema>;
 export const EventSchema = z.object({
   id: z.string(), timestamp: z.string(), project: z.string(), projectName: z.string(),
   hook: z.string(), tool: z.string(), decision: z.string(), session: z.string(),
@@ -65,12 +70,12 @@ export const tune = defineRpc({
   input: TargetSchema.extend({ kind: TuneKindSchema, texts: z.array(z.string().min(1).max(65536)).min(1).max(20), preset: z.string().max(64).optional() }),
   output: TuneResultSchema,
 });
-export const HostIdSchema = z.enum(["claude", "codex"]);
+export const HostIdSchema = z.enum(["claude", "codex", "omp"]);
 export type HostId = z.infer<typeof HostIdSchema>;
 export const ReleaseSchema = z.object({ version: z.string(), tag: z.string(), name: z.string(), publishedAt: z.string(), url: z.string() });
 export const HostSchema = z.object({
   id: HostIdSchema, label: z.string(), available: z.boolean(), version: z.string().nullable(), enabled: z.boolean(),
-  source: z.string().nullable(), managed: z.boolean(), error: z.string().nullable(),
+  source: z.string().nullable(), managed: z.boolean(), error: z.string().nullable(), minimum: z.string(),
 });
 export type HostStatus = z.infer<typeof HostSchema>;
 export const InstallActionSchema = z.enum(["install", "remove"]);

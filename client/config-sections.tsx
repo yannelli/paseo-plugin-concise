@@ -5,7 +5,7 @@ import { Heading, Notice } from "./ui";
 
 export const PRESETS = ["default", "ryan", "technical", "ste", "minimal", "all", "git", "statistical"];
 const MODES = ["confirm", "ask", "deny"];
-const MODE_HINT = "confirm denies once and keeps an identical retry. ask uses the Claude permission prompt. deny blocks until the retry limit.";
+const MODE_HINT = "confirm denies once and keeps an identical retry. ask uses the Claude permission prompt or an omp confirm dialog. deny blocks until the retry limit.";
 const Group = ({ children }: { children: React.ReactNode }) => <View style={{ gap: 4, minWidth: 0 }}>{children}</View>;
 
 export function LimitsSection({ form }: { form: Form }) {
@@ -29,7 +29,7 @@ export function ChecksSection({ form }: { form: Form }) {
     <ToggleSetting form={form} path="softFail" label="Soft fail" hint="Turns every deny, ask, and block into an allow with a notice." />
     <Heading theme={form.theme} title="Replies" description="Checks on the final reply and on subagent reports." />
     <ToggleSetting form={form} path="stopHook" label="Check final replies" />
-    <ToggleSetting form={form} path="subagentStop.enabled" label="Check subagent replies" hint="Also covers SubagentHandback reports in Claude Code auto mode." />
+    <ToggleSetting form={form} path="subagentStop.enabled" label="Check subagent replies" hint="Also covers SubagentHandback reports in Claude Code auto mode. omp has no subagent stop event, so it does not check them." />
     {stopOff && supports(form, "subagentStop.enabled") && <Notice theme={form.theme} tone="warning">Final reply checks are off, so subagent replies are not checked.</Notice>}
     <ListSetting form={form} path="subagentStop.exemptAgentTypes" label="Exempt agent types" merge="replace" placeholder="Explore" />
     {supports(form, "context.enabled") && <>

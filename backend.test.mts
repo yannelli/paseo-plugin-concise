@@ -6,6 +6,7 @@ import test from "node:test";
 import { ActivityStore, activityStats, normalizeEvent } from "./server/activity.ts";
 import { createBackend, discoverInstallation, visibleEnvironment } from "./server/adapter.ts";
 import { compareVersions } from "./shared/versions.ts";
+import { projectGroups, projectLabel, visibleProjects } from "./shared/projects.ts";
 
 const record = (extra: Record<string, unknown> = {}) => ({
   cwd: "/project", hook: "check-edit", ts: "2026-09-05T10:30:00.000Z", decision: "allow",
@@ -100,11 +101,11 @@ async function fixture(t: test.TestContext) {
   return { root, cwd, home, env: { HOME: home, USERPROFILE: home, PATH: process.env.PATH, PASEO_CONCISE_ROOT: join(root, "missing") } };
 }
 
-async function fakeInstallation(root: string, version = "0.7.0") {
+async function fakeInstallation(root: string, version = "0.7.0", projects: unknown[] = []) {
   const files: Record<string, string> = {
     ".claude-plugin/plugin.json": JSON.stringify({ name: "concise", version }),
     "web/configuration.mjs": "export function configuration() {}\nexport function saveConfiguration() {}\n",
-    "web/hub.mjs": "export function createHub() { return { list: () => [], close() {} }; }\n",
+    "web/hub.mjs": `export function createHub() { return { list: () => ${JSON.stringify(projects)}, close() {} }; }\n`,
     "web/testing/runner.mjs": "export async function runTest() {}\nexport async function disposeTests() {}\n",
   };
   for (const [path, content] of Object.entries(files)) {
@@ -266,4 +267,60 @@ test("settings written by the 0.10 controls pass upstream validation and name th
   const revision = saved.layers.find(({ id }) => id === "project-claude")!.revision;
   const broken = { features: { dictionary: { entries: [{ id: "ok", match: "exact", value: "a", fix: "b" }, { id: "bad", match: "regex", value: "(", fix: "c" }] } } };
   await assert.rejects(backend.saveConfiguration({ cwd, id: "project-claude", text: JSON.stringify(broken), revision }), /features\.dictionary\.entries\[1\]: value does not compile/);
+});
+
+// Records written by the be-concise 0.12.0 omp extension (omp/extension.mjs) and its hooks, with paths shortened.
+const ompRecords = [
+  { ts: "2026-10-07T18:48:22.381Z", hook: "session-context", event: "SessionStart", tool: null, session: "019a2b3c-omp-session", cwd: "/work/proj", decision: "flag", durationMs: 3, error: null,
+    request: { hook_event_name: "SessionStart", session_id: "019a2b3c-omp-session", cwd: "/work/proj" },
+    response: { hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: "[concise] Active rules:" } }, source: "live" },
+  { ts: "2026-10-07T18:48:22.443Z", hook: "check-edit", event: "PreToolUse", tool: "Write", session: "019a2b3c-omp-session", cwd: "/work/proj", decision: "flag", durationMs: 21, error: null,
+    request: { hook_event_name: "PreToolUse", session_id: "019a2b3c-omp-session", cwd: "/work/proj", tool_name: "Write", tool_input: { file_path: "/work/proj/notes.md", content: "This is a robust — seamless tool.\n" } },
+    response: { hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: "[concise] soft-fail: 1 em dash, 2 AI writing patterns in /work/proj/notes.md." } }, source: "live" },
+  { ts: "2026-10-07T18:48:22.565Z", hook: "check-edit", event: "PreToolUse", tool: "apply_patch", session: "019a2b3c-omp-session", cwd: "/work/proj", decision: "flag", durationMs: 21, error: null,
+    request: { hook_event_name: "PreToolUse", session_id: "019a2b3c-omp-session", cwd: "/work/proj", tool_name: "apply_patch", tool_input: { input: "*** Begin Patch\n*** Add File: a.md\n+Hello — world\n*** End Patch" } },
+    response: { hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: "[concise] soft-fail: 1 em dash in /work/proj/a.md." } }, source: "live" },
+];
+
+test("omp records normalize like Claude Code and Codex records, including patch targets in tool_input.input", () => {
+  const [rules, write, patch] = ompRecords.map((value, index) => normalizeEvent(value, String(index))!.event);
+  assert.deepEqual([rules.tool, rules.decision, rules.session], ["SessionStart", "context", "019a2b3c-omp-session"]);
+  assert.deepEqual([write.tool, write.decision, write.target], ["Write", "flag", "/work/proj/notes.md"]);
+  assert.equal(patch.tool, "apply_patch");
+  assert.equal(patch.target, "*** Begin Patch *** Add File: a.md +Hello — world *** End Patch");
+  assert.match(patch.summary, /1 em dash in \/work\/proj\/a\.md/);
+  assert.equal(activityStats([rules, write, patch]).sessions, 1);
+});
+
+test("discovery finds omp caches in the default, profile, and XDG data roots", async (t) => {
+  const { root, home } = await fixture(t);
+  const xdg = join(root, "xdg");
+  const cache = (base: string, version: string) => join(base, "plugins/cache/plugins", `be-concise___concise___${version}`);
+  await fakeInstallation(cache(join(home, ".omp"), "0.12.0"), "0.12.0");
+  await fakeInstallation(cache(join(home, ".omp/profiles/work"), "0.12.1"), "0.12.1");
+  await fakeInstallation(join(home, ".omp/plugins/cache/plugins/other___concise___0.13.0"), "0.13.0");
+  const env = { HOME: home, XDG_DATA_HOME: xdg, CLAUDE_CONFIG_DIR: join(root, "claude"), CODEX_HOME: join(root, "codex") };
+  assert.equal((await discoverInstallation(env))!.version, "0.12.1");
+  const newest = cache(join(xdg, "omp"), "0.12.2");
+  await fakeInstallation(newest, "0.12.2");
+  assert.equal((await discoverInstallation(env))!.root, await realpath(newest));
+});
+
+test("snapshots keep the 0.11.0 project fields and the picker hides missing projects by repository", async (t) => {
+  const { root, env } = await fixture(t);
+  const repo = { name: "app", root: "/src/app", worktree: null, subdir: "" };
+  await fakeInstallation(join(root, "installed"), "0.11.0", [
+    { key: "a", name: "app", cwd: "/src/app", lastSeen: "3", missing: false, repo },
+    { key: "b", name: "fix-bug", cwd: "/trees/fix-bug", lastSeen: "2", missing: true, repo: { ...repo, worktree: "fix-bug" } },
+    { key: "c", name: "notes", cwd: "/notes", lastSeen: "1", missing: false, repo: null },
+    { key: "d", name: "docs", cwd: "/src/app/docs", lastSeen: "0", repo: { name: 7 } },
+  ]);
+  const backend = createBackend({ ...env, PASEO_CONCISE_ROOT: join(root, "installed") });
+  t.after(backend.close);
+  const { projects } = await backend.getSnapshot();
+  assert.deepEqual(projects.map(({ key, missing, repo: value }) => [key, missing, value?.worktree ?? value?.name ?? value]), [["a", false, "app"], ["b", true, "fix-bug"], ["c", false, null], ["d", false, null]]);
+  assert.deepEqual(projects.map(projectLabel), ["app", "fix-bug (worktree) (missing)", "notes", "docs"]);
+  assert.deepEqual(projectGroups(visibleProjects(projects, false, "")).map(({ label, projects: items }) => [label, items.map(({ key }) => key)]), [["app", ["a"]], ["No git repository", ["c", "d"]]]);
+  assert.deepEqual(visibleProjects(projects, false, "/trees/fix-bug").map(({ key }) => key), ["a", "b", "c", "d"]);
+  assert.deepEqual(projectGroups([{ key: "e", name: "old", cwd: "/old", lastSeen: "" }]), [{ id: "", label: null, projects: [{ key: "e", name: "old", cwd: "/old", lastSeen: "" }] }]);
 });

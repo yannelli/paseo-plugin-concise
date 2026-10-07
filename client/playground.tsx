@@ -11,7 +11,7 @@ type JsonObject = Record<string, unknown>;
 type Finding = { category?: string; match?: string; line?: number; fix?: string | null };
 type HookRun = { hook: string; decision: string; durationMs?: number; findings: Finding[]; reason: string; error?: string | null };
 const kinds: { value: Kind; label: string; field: string }[] = [
-  { value: "Write", label: "File write", field: "File content" }, { value: "apply_patch", label: "Codex patch", field: "Patch" },
+  { value: "Write", label: "File write", field: "File content" }, { value: "apply_patch", label: "Patch (Codex, omp)", field: "Patch" },
   { value: "Bash", label: "Shell command", field: "Command text" }, { value: "Stop", label: "Final reply", field: "Reply text" },
 ];
 const examples: Record<Kind, string> = {
