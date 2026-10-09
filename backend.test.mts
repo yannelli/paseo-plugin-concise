@@ -90,6 +90,8 @@ test("environment output includes valid supported flags and excludes arbitrary v
     BEC_LOG_ENABLED: "secret", BEC_FEATURE_DISABLE: "api-token", BEC_ALLOW_PHRASES: "private phrase",
   }), { BEC_MONITOR_PERSIST: "0", BEC_FEATURE_ALWAYS_ENABLE: "aiWriting,comments", BEC_LOG_MAX_SIZE: "5m" });
   assert.deepEqual(visibleEnvironment({ BEC_FEATURE_ENABLE: "dictionary,emDash" }), { BEC_FEATURE_ENABLE: "dictionary,emDash" });
+  assert.deepEqual(visibleEnvironment({ BEC_FEATURE_DISABLE: "shellWrites, tasks", BEC_CONFIG_PATH_ONLY: "1", BEC_FEATURE_ENABLE: "scan" }),
+    { BEC_FEATURE_DISABLE: "shellWrites, tasks", BEC_CONFIG_PATH_ONLY: "1" });
 });
 
 async function fixture(t: test.TestContext) {
@@ -323,4 +325,43 @@ test("snapshots keep the 0.11.0 project fields and the picker hides missing proj
   assert.deepEqual(projectGroups(visibleProjects(projects, false, "")).map(({ label, projects: items }) => [label, items.map(({ key }) => key)]), [["app", ["a"]], ["No git repository", ["c", "d"]]]);
   assert.deepEqual(visibleProjects(projects, false, "/trees/fix-bug").map(({ key }) => key), ["a", "b", "c", "d"]);
   assert.deepEqual(projectGroups([{ key: "e", name: "old", cwd: "/old", lastSeen: "" }]), [{ id: "", label: null, projects: [{ key: "e", name: "old", cwd: "/old", lastSeen: "" }] }]);
+});
+
+test("records from the be-concise 0.14.0 tool text and notebook hooks name their target", () => {
+  const target = (tool: string, input: Record<string, unknown>) => normalizeEvent(record({ hook: "check-tool-text", request: { tool_name: tool, session_id: "s", tool_input: input } }), "id")!.event;
+  assert.equal(target("NotebookEdit", { notebook_path: "/project/n.ipynb", new_source: "x" }).target, "/project/n.ipynb");
+  assert.equal(target("ExitPlanMode", { plan: "Step one.\nStep two." }).target, "Step one. Step two.");
+  assert.equal(target("TaskCreate", { subject: "Fix the build", description: "Long text" }).target, "Fix the build");
+  const post = target("mcp__github__create_issue", { title: "Bug", body: "Details" });
+  assert.deepEqual([post.tool, post.target], ["mcp__github__create_issue", "Bug"]);
+});
+
+test("settings written by the 0.14 scan controls and the code scope pass upstream validation", async (t) => {
+  const installed = await discoverInstallation(process.env);
+  if (!installed || compareVersions(installed.version, "0.14.0") < 0) return t.skip("be-concise >=0.14.0 is required for scan settings coverage");
+  const { cwd, env } = await fixture(t);
+  const backend = createBackend({ ...env, PASEO_CONCISE_ROOT: installed.root });
+  t.after(backend.close);
+  const before = await backend.getConfiguration({ cwd });
+  assert.deepEqual(Object.keys((before.defaults as { scan: object }).scan).sort(), ["codeFiles", "heredocWrites", "mcp", "notebooks", "plans", "questions", "shellWrites", "tasks"]);
+  const layer = { scan: { shellWrites: false, tasks: false }, features: { dictionary: { entries: [{ id: "todo", match: "contains", value: "TODO", fix: "file an issue", scopes: ["code"] }] } } };
+  const saved = await backend.saveConfiguration({ cwd, id: "project-claude", text: JSON.stringify(layer), revision: null });
+  const effective = saved.effective as { scan: Record<string, boolean>; problems: unknown[] };
+  assert.deepEqual([effective.scan.shellWrites, effective.scan.tasks, effective.scan.plans], [false, false, true]);
+  assert.deepEqual(effective.problems, []);
+});
+
+test("from be-concise 0.13.1, BEC_CONFIG_PATH is its own layer under the user and project files", async (t) => {
+  const installed = await discoverInstallation(process.env);
+  if (!installed || compareVersions(installed.version, "0.13.1") < 0) return t.skip("be-concise >=0.13.1 is required for the env-config layer");
+  const { root, cwd, env } = await fixture(t);
+  await writeFile(join(root, "shared.json"), '{"maxCommentLines":7,"maxFileLines":100}');
+  await mkdir(join(cwd, ".claude"));
+  await writeFile(join(cwd, ".claude/concise.json"), '{"maxFileLines":200}');
+  const backend = createBackend({ ...env, PASEO_CONCISE_ROOT: installed.root, BEC_CONFIG_PATH: "../shared.json" });
+  t.after(backend.close);
+  const state = await backend.getConfiguration({ cwd });
+  assert.deepEqual(state.layers.filter(({ active }) => active).map(({ id }) => id), ["env-config", "project-claude"]);
+  assert.equal(state.layers[0].path, join(root, "shared.json"));
+  assert.deepEqual([state.effective.maxCommentLines, state.effective.maxFileLines], [7, 200]);
 });

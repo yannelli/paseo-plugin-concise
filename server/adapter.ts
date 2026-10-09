@@ -22,9 +22,13 @@ type Runner = { runTest(input: PreviewInput & { env: Environment; config: Record
 type Runtime = { root: string; version: string; config: ConfigurationModule; runner: Runner; hub: Hub };
 const MISSING = "Install be-concise 0.7.0 or newer for Claude Code or Codex, or 0.12.0 or newer for omp, on this host. For a source checkout, set PASEO_CONCISE_ROOT to its folder, then reload this plugin.";
 const BOOLEAN_FLAGS = new Set([
-  "BEC_HOOK_SOFT_FAIL", "BEC_DISABLE_STOP_HOOK", "BEC_MONITOR_PERSIST", "BEC_MONITOR_DISABLED",
+  "BEC_HOOK_SOFT_FAIL", "BEC_DISABLE_STOP_HOOK", "BEC_MONITOR_PERSIST", "BEC_MONITOR_DISABLED", "BEC_CONFIG_PATH_ONLY",
   "BEC_LOG_ENABLED", "BEC_LOG_USE_JSON", "BEC_LOG_USE_PLAINTEXT",
 ]);
+
+// be-concise 0.14.0 added the scan switches as feature ids.
+const FEATURE_IDS = new Set(["emDash", "aiWriting", "dictionary", "comments", "fileSize", "prBody", "stopHook",
+  "codeFiles", "notebooks", "heredocWrites", "shellWrites", "mcp", "plans", "tasks", "questions"]);
 
 export function visibleEnvironment(env: Environment): Record<string, string> {
   return Object.fromEntries(Object.entries(env).filter((entry): entry is [string, string] => {
@@ -32,7 +36,7 @@ export function visibleEnvironment(env: Environment): Record<string, string> {
     if (typeof value !== "string" || value.length > 200) return false;
     if (BOOLEAN_FLAGS.has(key)) return /^(1|0|true|false|yes|no|on|off)$/i.test(value.trim());
     if (["BEC_FEATURE_ENABLE", "BEC_FEATURE_DISABLE", "BEC_FEATURE_ALWAYS_ENABLE", "BEC_FEATURE_ALWAYS_DISABLE"].includes(key)) {
-      return value.split(",").every((id) => ["emDash", "aiWriting", "dictionary", "comments", "fileSize", "prBody", "stopHook"].includes(id.trim()));
+      return value.split(",").every((id) => FEATURE_IDS.has(id.trim()));
     }
     if (key === "BEC_LOG_MAX_SIZE") return /^\d+(?:\.\d+)?\s*[bkmg]?b?$/i.test(value.trim());
     if (key === "BEC_LOG_MAX_FILES") return /^\d+$/.test(value);

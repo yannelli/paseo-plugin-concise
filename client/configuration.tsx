@@ -124,7 +124,7 @@ export function ConfigurationEditor({ cwd, theme, compact, version, visible, dra
       {problems.map((problem) => <Label key={problem} theme={theme} muted size={12}>{problem}</Label>)}
     </Notice>}
     <Card theme={theme}>
-      <Label theme={theme} muted size={12}>Configuration files · higher files override lower ones</Label>
+      <Label theme={theme} muted size={12}>Configuration files · an active file overrides the active files above it</Label>
       {query.data.layers.map(layerButton)}
       {query.data.filterLayers.length > 0 && <Label theme={theme} muted size={12}>Test output filter files</Label>}
       {query.data.filterLayers.map(layerButton)}

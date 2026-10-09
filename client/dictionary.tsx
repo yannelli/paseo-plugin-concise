@@ -1,7 +1,7 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import React, { useState } from "react";
 import { Text, View } from "react-native";
-import { at, ChoiceSetting, type Form, isObject, ToggleSetting } from "./config-form";
+import { at, ChoiceSetting, type Form, isObject, supports, ToggleSetting } from "./config-form";
 import { Badge, Button, Chips, Field, Heading, Label, MultiChips, Notice, Row, Toggle } from "./ui";
 
 type Entry = { id: string; match?: string; value?: string; fix?: string; on?: string; caseSensitive?: boolean; flags?: string; hooks?: string[]; scopes?: string[]; enabled?: boolean };
@@ -11,7 +11,8 @@ const ID = /^[a-z0-9][a-z0-9-]*$/;
 const MATCHES = ["exact", "contains", "startsWith", "endsWith", "regex"];
 const UNITS = ["word", "line", "text"];
 const HOOKS = [{ value: "edit", label: "File edits" }, { value: "bash", label: "Commits and gh" }, { value: "stop", label: "Replies" }, { value: "subagentStop", label: "Subagent replies" }];
-const SCOPES = ["files", "comments", "gh", "commit", "command", "reply"].map((value) => ({ value, label: value }));
+// be-concise 0.14.0 added the code scope together with the scan settings.
+const scopes = (code: boolean) => ["files", "comments", ...(code ? ["code"] : []), "gh", "commit", "command", "reply"].map((value) => ({ value, label: value }));
 const matchHints: Record<string, string> = {
   exact: "Matches the whole value.", contains: "Matches the value anywhere; on word, it reports the whole word.",
   startsWith: "Matches text that starts with the value.", endsWith: "Matches text that ends with the value.",
@@ -130,7 +131,7 @@ export function DictionarySection({ form, saveError }: { form: Form; saveError?:
       <Label theme={theme} muted>Hooks · none selected means all</Label>
       <MultiChips theme={theme} label="Hooks" items={HOOKS} value={draft.hooks} onChange={(hooks) => change({ hooks })} />
       <Label theme={theme} muted>Scopes · none selected means all except command</Label>
-      <MultiChips theme={theme} label="Scopes" items={SCOPES} value={draft.scopes} onChange={(scopes) => change({ scopes })} />
+      <MultiChips theme={theme} label="Scopes" items={scopes(supports(form, "scan.codeFiles"))} value={draft.scopes} onChange={(scopes) => change({ scopes })} />
       <Field theme={theme} label="Id" monospace value={draft.id} onChange={(id) => change({ id: id.toLowerCase(), idEdited: true })} placeholder="blacklist" />
       <Label theme={theme} muted size={11}>Denials carry the tag [concise:dictionary:{draft.id || "id"}].</Label>
       {problem && (draft.value || draft.fix) && <Notice theme={theme} tone="warning">{problem}</Notice>}

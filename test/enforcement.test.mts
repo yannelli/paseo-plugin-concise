@@ -33,6 +33,12 @@ test("quick toggle preserves the active layer, unrelated settings, and original 
   assert.deepEqual(JSON.parse(update.text), { maxCommentLines: 8, checks: { fileSize: false }, softFail: false });
 });
 
+test("quick toggle writes the project file over a 0.13.1 BEC_CONFIG_PATH layer", () => {
+  const config = state();
+  config.layers.unshift({ id: "env-config", label: "BEC_CONFIG_PATH", path: "/shared/concise.json", text: '{"softFail":false}', exists: true, active: true, revision: "env" });
+  assert.deepEqual(enforcementUpdate(config, false, "omp"), { id: "project-claude", revision: null, text: '{\n  "softFail": true\n}\n' });
+});
+
 test("quick toggle rejects malformed or redirected configuration", () => {
   for (const text of ["{", "[]", "null"]) {
     const config = state();

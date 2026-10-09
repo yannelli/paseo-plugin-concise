@@ -27,6 +27,17 @@ export function ChecksSection({ form }: { form: Form }) {
     <ToggleSetting form={form} path="checks.fileSize" label="File length" />
     <ToggleSetting form={form} path="checks.prBody" label="PR body length" />
     <ToggleSetting form={form} path="softFail" label="Soft fail" hint="Turns every deny, ask, and block into an allow with a notice." />
+    {supports(form, "scan.codeFiles") && <>
+      <Heading theme={form.theme} title="Scanned text" description="Places the style checks read beyond file writes and edits. Each switch stops the style checks there only." />
+      <ToggleSetting form={form} path="scan.codeFiles" label="Whole code files" hint="Runs code-scope packs and dictionary entries over whole code files, string literals included." />
+      <ToggleSetting form={form} path="scan.notebooks" label="Notebook cells" hint="Cells that NotebookEdit writes." />
+      <ToggleSetting form={form} path="scan.heredocWrites" label="Heredoc file writes" hint="Files that cat or tee writes from a heredoc, before the command runs." />
+      <ToggleSetting form={form} path="scan.shellWrites" label="Files shell commands change" hint="Lines a shell command added to files in a git work tree, after it runs." />
+      <ToggleSetting form={form} path="scan.mcp" label="MCP tool posts" hint="Text and files that MCP tools post or write." />
+      <ToggleSetting form={form} path="scan.plans" label="Plans" hint="The plan that ExitPlanMode shows for approval." />
+      <ToggleSetting form={form} path="scan.tasks" label="Tasks" hint="TaskCreate and TaskUpdate text." />
+      <ToggleSetting form={form} path="scan.questions" label="Questions to you" hint="AskUserQuestion questions and options." />
+    </>}
     <Heading theme={form.theme} title="Replies" description="Checks on the final reply and on subagent reports." />
     <ToggleSetting form={form} path="stopHook" label="Check final replies" />
     <ToggleSetting form={form} path="subagentStop.enabled" label="Check subagent replies" hint="Also covers SubagentHandback reports in Claude Code auto mode. omp has no subagent stop event, so it does not check them." />

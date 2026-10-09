@@ -1,6 +1,6 @@
 # be-concise installer
 
-Created: 2026-10-05. Last updated: 2026-10-07.
+Created: 2026-10-05. Last updated: 2026-10-09.
 
 The **Plugin** tab installs, updates, downgrades, and removes the `concise@be-concise` plugin for Claude Code, Codex, and omp (oh-my-pi) on the daemon host. It uses the [yannelli/be-concise GitHub releases](https://github.com/yannelli/be-concise/releases). The same view appears in the **Connect be-concise** state when no installation is found.
 
@@ -13,7 +13,7 @@ The **Plugin** tab installs, updates, downgrades, and removes the `concise@be-co
 
 ## Host commands
 
-Each host gets its own release folder as a local marketplace. Each change points the marketplace at the new folder. The commands run with the daemon environment, so `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `OMP_PROFILE`, and `XDG_DATA_HOME` apply. The CLIs are found on `PATH` or in `~/.local/bin`. On Windows the server looks for `claude.exe`, `codex.exe`, `omp.exe`, and `git.exe`. Status output that is not the expected JSON shows as a host error. The server adds `--json` to every host command. Commands that print text with it still report failure through the exit code.
+Each host gets its own release folder as a local marketplace. Each change points the marketplace at the new folder. The commands run with the daemon environment, so `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `OMP_PROFILE`, and `XDG_DATA_HOME` apply. The CLIs are found on `PATH`, in `~/.local/bin`, or in `~/.bun/bin`. Each host command runs with the folder of its CLI first on `PATH`, because a bun global install of omp starts with `#!/usr/bin/env bun` and bun sits in the same folder. On Windows the server looks for `claude.exe`, `codex.exe`, `omp.exe`, and `git.exe`. Status output that is not the expected JSON shows as a host error. The server adds `--json` to every host command. Commands that print text with it still report failure through the exit code.
 
 | Step | Claude Code (user scope) | Codex | omp (user scope) |
 | --- | --- | --- | --- |
@@ -32,11 +32,12 @@ Behavior checked on 2026-10-05 with Claude Code 2.1.289 and Codex CLI 0.159.0, u
 - `codex plugin marketplace add` refuses a second source with the same name. `codex plugin marketplace remove` keeps the plugin installed and enabled. `codex plugin add` installs the folder version, including a lower one.
 - Codex keeps a `trusted_hash` for each hook in `config.toml`. After a change, start a new session and review the hooks with `/hooks`.
 
-Behavior checked on 2026-10-07 with omp 18.7.0, using the temporary profile `paseo-test` (`OMP_PROFILE=paseo-test`) and temporary `HOME` folders. The profile was deleted afterward:
+Behavior checked on 2026-10-07 with omp 18.7.0 (a binary in `~/.local/bin`) and again on 2026-10-09 with omp 18.8.4 (a bun global install in `~/.bun/bin`). Both runs used the temporary profile `paseo-test` (`OMP_PROFILE=paseo-test`) and temporary `HOME` folders, and deleted the profile afterward. The results were the same on both versions:
 
 - The data root `<root>` is `~/.omp/profiles/<name>` when `OMP_PROFILE` is set, even when `XDG_DATA_HOME` is also set. Otherwise it is `$XDG_DATA_HOME/omp` when that folder exists, and `~/.omp` in all other cases. `~/.local/share/omp` is not used when `XDG_DATA_HOME` is unset.
 - `omp plugin marketplace list --json` prints text, so the server reads `<root>/marketplaces.json`. Each entry has `name`, `sourceType`, and `sourceUri`. A local `sourceUri` keeps the path as given, with symlinks unresolved. A GitHub source is stored as `yannelli/be-concise`.
 - `omp plugin list --json` prints `{ "npm": [], "marketplace": [ { "id", "scope", "entries": [ { "scope", "installPath", "version", ... } ] } ] }`. An entry gets `"enabled": false` only after `omp plugin disable`. The key is absent until the plugin is disabled or enabled.
+- A failed command prints a line that starts with `✘` and exits with code 1. That includes a duplicate marketplace or install and an uninstall of a plugin that is not installed.
 - `omp plugin marketplace add` refuses a second marketplace with the same name. `omp plugin marketplace remove` keeps the plugin installed and enabled.
 - `omp plugin install` refuses a plugin that is already installed. With `--force` it installs the folder version, whether that version is higher, lower, or the same. `omp plugin upgrade` also moves to a lower version. The server uses `install --force` because the same command also reinstalls the same version.
 - omp copies the plugin to `<root>/plugins/cache/plugins/be-concise___concise___<version>` and links `<root>/plugins/node_modules/concise` to it. A version change replaces that folder. `omp plugin uninstall` deletes the folder, the link, and the entries in `installed_plugins.json` and `omp-plugins.lock.json`.

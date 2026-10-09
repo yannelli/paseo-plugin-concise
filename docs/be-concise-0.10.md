@@ -1,6 +1,6 @@
-# be-concise 0.10 to 0.12 support
+# be-concise 0.10 to 0.14 support
 
-Created: 2026-10-05. Last updated: 2026-10-07.
+Created: 2026-10-05. Last updated: 2026-10-09.
 
 This page lists the be-concise settings and tools that this plugin exposes, the oldest version that has each one, and the rules the controls follow. Sources, read on 2026-10-05: the [v0.10.0 release](https://github.com/yannelli/be-concise/releases/tag/v0.10.0), [configuration.md](https://github.com/yannelli/be-concise/blob/v0.10.0/plugins/concise/docs/configuration.md), and [tools.md](https://github.com/yannelli/be-concise/blob/v0.10.0/plugins/concise/docs/tools.md). Read them again before you change a control.
 
@@ -17,6 +17,9 @@ This page lists the be-concise settings and tools that this plugin exposes, the 
 | `ignoreGlobs`, `styleIgnoreGlobs`, `allowList`, `bypass` | 0.7.0 | Configuration → Exceptions |
 | `features.aiWriting.allow`, `enablePatterns`, `disablePatterns` | 0.7.0 | Configuration → Style |
 | `log.*`, `monitor.persist` | 0.7.0 | Configuration → Logging |
+| `scan.codeFiles`, `notebooks`, `heredocWrites`, `shellWrites`, `mcp`, `plans`, `tasks`, `questions` | 0.14.0 | Configuration → Checks → Scanned text |
+| The `code` scope on a dictionary entry | 0.14.0 | Configuration → Dictionary → Scopes, shown when `scan.codeFiles` exists |
+| The `scan` ids as `BEC_FEATURE_*` ids, and `BEC_CONFIG_PATH_ONLY` | 0.14.0, 0.13.1 | Configuration → Effective configuration → Daemon environment |
 
 0.7.0 is the oldest version this plugin supports, so a 0.7.0 row means that version or earlier. A control appears only when the `defaults` object from the installed be-concise has its key. The upstream `validateConfig` rejects unknown keys, so a control for a newer key would make every save fail on an older install. The Tune section needs 0.10.0. The JSON view edits every other key, such as `features.aiWriting.categories`, `packs`, and `options`.
 
@@ -48,9 +51,9 @@ The tuner accepts pasted samples only: up to 20, each up to 64 KiB. It does not 
 
 The composer pill counts `deny`, `block`, `ask`, and `flag`, so injected rules do not raise it.
 
-## 0.10.1, 0.11, and 0.12
+## 0.10.1 to 0.14
 
-Sources, read on 2026-10-07: the [v0.10.1](https://github.com/yannelli/be-concise/releases/tag/v0.10.1), [v0.11.0](https://github.com/yannelli/be-concise/releases/tag/v0.11.0), and [v0.12.0](https://github.com/yannelli/be-concise/releases/tag/v0.12.0) releases, the diff from v0.10.0 to v0.12.0, and [host-features.md](https://github.com/yannelli/be-concise/blob/v0.12.0/plugins/concise/docs/host-features.md#omp) at v0.12.0. None of these releases adds a configuration key, so the configuration controls do not change.
+Sources, read on 2026-10-07: the [v0.10.1](https://github.com/yannelli/be-concise/releases/tag/v0.10.1), [v0.11.0](https://github.com/yannelli/be-concise/releases/tag/v0.11.0), and [v0.12.0](https://github.com/yannelli/be-concise/releases/tag/v0.12.0) releases, the diff from v0.10.0 to v0.12.0, and [host-features.md](https://github.com/yannelli/be-concise/blob/v0.12.0/plugins/concise/docs/host-features.md#omp) at v0.12.0. The [v0.13.0](https://github.com/yannelli/be-concise/releases/tag/v0.13.0), [v0.13.1](https://github.com/yannelli/be-concise/releases/tag/v0.13.1), and [v0.14.0](https://github.com/yannelli/be-concise/releases/tag/v0.14.0) releases, the diff from v0.12.0 to v0.14.0, and [configuration.md](https://github.com/yannelli/be-concise/blob/v0.14.0/plugins/concise/docs/configuration.md) at v0.14.0 were read on 2026-10-09. Only 0.14.0 adds configuration keys.
 
 | Change | Since | Plugin behavior |
 | --- | --- | --- |
@@ -58,6 +61,9 @@ Sources, read on 2026-10-07: the [v0.10.1](https://github.com/yannelli/be-concis
 | The omp extension `omp/extension.mjs`, listed under `omp.extensions` in `plugins/concise/package.json` | 0.12.0 | The Plugin tab installs it for omp, and discovery reads the omp caches. See [be-concise installer](plugin-installer.md). |
 | omp hook records | 0.12.0 | Records reach the same registry with the tool names `Write`, `Edit`, `Bash`, and `apply_patch`, and omp session IDs. An omp `apply_patch` record carries the patch in `tool_input.input`, where Codex uses `tool_input.command`. The activity target reads both. |
 | Reply checks read `last_assistant_message` and `SubagentHandback` messages | 0.10.1 | No change. Previews still pass the reply text. |
+| Claude 5.5 tell and hidden-character pattern packs | 0.13.0 | No change. Presets select the packs. |
+| `BEC_CONFIG_PATH` names a file that loads under the user and project files, in place of the project file. `BEC_CONFIG_PATH_ONLY` skips the user and project files. | 0.13.1 | The file appears first in the layer list as **BEC_CONFIG_PATH** (`env-config`). The quick enforcement toggle then writes the project file, which overrides it. Before 0.13.1 the layer is `project-override`, and the toggle stays unavailable. |
+| The `scan` switches, and hooks for notebooks, heredoc writes, shell writes, MCP posts, plans, tasks, and questions | 0.14.0 | **Scanned text** controls. Activity shows the new hook `check-tool-text` and `check-shell-writes` records. Their target is `notebook_path`, the task `subject`, the MCP post `title`, or the `plan`. |
 
 omp has no subagent stop event, so it does not check subagent replies. It reads the same `.claude/concise.json` and `.codex/concise.json` project files. The workspace enforcement toggle writes `.claude/concise.json` for omp agents, and the composer pill appears for the Paseo `omp` provider.
 

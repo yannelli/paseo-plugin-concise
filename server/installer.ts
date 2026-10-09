@@ -93,7 +93,7 @@ export async function managedRoot(env: Environment): Promise<string | null> {
 
 export async function locate(name: string, env: Environment): Promise<string | null> {
   const home = env.HOME || env.USERPROFILE || homedir();
-  for (const directory of [...(env.PATH || "").split(delimiter).filter(Boolean), join(home, ".local/bin")]) {
+  for (const directory of [...(env.PATH || "").split(delimiter).filter(Boolean), join(home, ".local/bin"), join(home, ".bun/bin")]) {
     const file = join(directory, process.platform === "win32" ? `${name}.exe` : name);
     try {
       await access(file, constants.X_OK);
@@ -148,8 +148,9 @@ export function createInstaller({ env = process.env, run = runCommand, fetchJson
     return next;
   }
 
+  // A bun global install of omp starts with #!/usr/bin/env bun, and bun sits next to it.
   async function cli(binary: string, args: string[]): Promise<unknown> {
-    const result = await run(binary, [...args, "--json"], { env, signal: stopping.signal });
+    const result = await run(binary, [...args, "--json"], { env: { ...env, PATH: [dirname(binary), env.PATH].filter(Boolean).join(delimiter) }, signal: stopping.signal });
     const value = parseJson(result.stdout);
     if (result.code === 0 && (!object(value) || value.outcome === undefined || value.outcome === "ok")) return value;
     const reason = object(value) && typeof value.message === "string" ? value.message : lastLine(result.stderr) || lastLine(result.stdout);

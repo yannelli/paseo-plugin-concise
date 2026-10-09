@@ -35,17 +35,20 @@ async function writeRelease(root: string, version: string) {
 const DAY = 24 * 60 * 60 * 1000;
 type Options = {
   binaries?: string[]; hosts?: Partial<Record<string, FakeHost>>; cloned?: (tag: string) => string; linked?: boolean;
-  respond?: (call: string) => RunResult | undefined; releases?: unknown[];
+  respond?: (call: string) => RunResult | undefined; releases?: unknown[]; bun?: boolean;
 };
 
-async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "omp", "git"], hosts = {}, cloned = (tag) => tag.slice(1), linked = false, respond = () => undefined, releases: listed = published }: Options = {}) {
+async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "omp", "git"], hosts = {}, cloned = (tag) => tag.slice(1), linked = false, respond = () => undefined, releases: listed = published, bun = false }: Options = {}) {
   const root = await mkdtemp(join(tmpdir(), "paseo-concise-installer-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const bin = join(root, "bin");
   await mkdir(bin);
+  const bunBin = join(root, "home/.bun/bin");
+  await mkdir(bunBin, { recursive: true });
   for (const name of binaries) {
-    await writeFile(join(bin, name), "#!/bin/sh\nexit 1\n");
-    await chmod(join(bin, name), 0o755);
+    const folder = bun && name === "omp" ? bunBin : bin;
+    await writeFile(join(folder, name), "#!/bin/sh\nexit 1\n");
+    await chmod(join(folder, name), 0o755);
   }
   const env = { HOME: join(root, "home"), PATH: bin, XDG_DATA_HOME: join(root, "data") };
   if (linked) {
@@ -64,9 +67,11 @@ async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "om
   };
   if (state.omp.source) await ompMarketplaces();
   const calls: string[][] = [];
+  const paths: string[] = [];
   const folderVersion = async (source: string | null) => JSON.parse(await readFile(join(source!, "plugins/concise/.claude-plugin/plugin.json"), "utf8")).version;
   const ok = (value: unknown) => ({ code: 0, stdout: `${JSON.stringify(value)}\n`, stderr: "" });
-  const run: Run = async (command, args, { signal }) => {
+  const run: Run = async (command, args, { signal, env: runEnv }) => {
+    paths.push(`${basename(command)} ${runEnv.PATH}`);
     const name = basename(command);
     calls.push([name, ...args.filter((arg) => arg !== "--json")]);
     if (signal) signals.push(signal);
@@ -123,7 +128,7 @@ async function fixture(t: test.TestContext, { binaries = ["claude", "codex", "om
   const installer = createInstaller({ env, run, fetchJson, onChange: () => { changes++; }, now: () => clock.now });
   t.after(installer.close);
   const releases = join(env.XDG_DATA_HOME, "paseo-be-concise/releases");
-  return { env, state, calls, installer, releases, clock, signals, changes: () => changes };
+  return { env, state, calls, paths, installer, releases, clock, signals, changes: () => changes };
 }
 
 test("status lists stable releases at or above 0.7.0 and reports missing host CLIs", async (t) => {
@@ -311,4 +316,13 @@ test("the omp data root follows OMP_PROFILE, then an existing XDG_DATA_HOME/omp,
   await mkdir(join(xdg, "omp"), { recursive: true });
   assert.equal(await ompRoot({ HOME: home, XDG_DATA_HOME: xdg }), join(xdg, "omp"));
   assert.equal(await ompRoot({ HOME: home, XDG_DATA_HOME: xdg, OMP_PROFILE: "work" }), join(home, ".omp/profiles/work"));
+});
+
+test("omp from a bun global install is found in ~/.bun/bin and runs with that folder on PATH", async (t) => {
+  const { env, paths, installer } = await fixture(t, { bun: true, releases: ompReleases });
+  const result = await settle(installer, { host: "omp", action: "install", version: "0.12.0" });
+  assert.equal(result.error, null);
+  assert.equal(result.status.hosts[2].version, "0.12.0");
+  const bunBin = join(env.HOME, ".bun/bin");
+  assert.ok(paths.filter((entry) => entry.startsWith("omp ")).every((entry) => entry === `omp ${bunBin}:${env.PATH}`));
 });

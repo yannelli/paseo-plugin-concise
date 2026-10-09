@@ -29,6 +29,7 @@ export function normalizeEvent(value: unknown, id: string, now = Date.now()): { 
   const decision = text(record.decision, 40) || "unknown";
   // be-concise 0.10 logs injected session rules as "flag"; a systemMessage there carries config warnings.
   // Codex sends apply_patch text as tool_input.command; omp sends it as tool_input.input.
+  // From be-concise 0.14.0: NotebookEdit, ExitPlanMode (plan), TaskCreate (subject), and MCP posts (title).
   const context = record.hook === "session-context" && decision === "flag" && !response.systemMessage;
   return {
     cwd,
@@ -39,7 +40,7 @@ export function normalizeEvent(value: unknown, id: string, now = Date.now()): { 
       hook: text(record.hook, 80), tool: text(record.tool || request.tool_name || record.event, 80),
       decision: context ? "context" : decision,
       session: text(record.session || request.session_id, 160), durationMs: duration,
-      target: text(input.file_path || input.path || input.command || input.input || record.path, 180),
+      target: text(input.file_path || input.notebook_path || input.path || input.command || input.input || input.subject || input.title || input.plan || record.path, 180),
       summary: text(record.error || output.permissionDecisionReason || response.reason || response.systemMessage || output.additionalContext, 280),
     },
   };

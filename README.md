@@ -7,7 +7,7 @@ A native companion to [be-concise](https://github.com/yannelli/be-concise) for C
 - Live hook decisions, searchable by tool, file, session, project, and reason. The project picker groups projects by repository and hides projects whose folder is gone. Pause the feed or open an event’s request and response.
 - A compact composer pill with the Be concise logo and one number. The number combines rejected and flagged decisions; the popup shows each decision count and a 30-minute chart. Turning enforcement off displays **Off** and sets the workspace's `softFail` override; flagged actions are allowed while hooks and test-output filtering remain active. Turn it on to restore enforcement. Agent environment overrides apply separately.
 - Call counts, interventions, sessions, average hook duration, and a 30-minute activity chart.
-- User and project configuration with sections for limits, checks, style, dictionary, exceptions, and logging, plus a JSON view and test filter settings. List controls follow the be-concise merge rule for each key.
+- User, project, and `BEC_CONFIG_PATH` configuration with sections for limits, checks, scanned text, style, dictionary, exceptions, and logging, plus a JSON view and test filter settings. List controls follow the be-concise merge rule for each key.
 - A dictionary editor for terms to flag, with match rules, fixes, and hook and scope limits. Entries from other files can be turned off or copied in.
 - A writing tuner that scans pasted samples and proposes settings they pass. Apply the proposal to a draft, review it, then save.
 - An isolated playground for file writes, Codex and omp patches, shell commands, and final replies. Previews show the decision, reason, and findings of each hook without executing the pasted command or writing the target file.
@@ -64,7 +64,7 @@ All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app in lig
 
 ## Install
 
-Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. Repository groups and hidden missing projects need 0.11.0. omp needs 0.12.0. Tested with be-concise 0.12.0. See [be-concise 0.10 to 0.12 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
+Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. Repository groups and hidden missing projects need 0.11.0. omp needs 0.12.0. The scan controls and the `code` dictionary scope need 0.14.0. Tested with be-concise 0.14.0. See [be-concise 0.10 to 0.14 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
 
 Install the npm release:
 
@@ -103,7 +103,7 @@ paseo plugin ls
 
 ### Install be-concise from Paseo
 
-Open **Be concise → Plugin**, or use the panel that appears when be-concise is missing. Choose a release and press **Install**, **Update**, or **Downgrade** for Claude Code, Codex, or omp. The daemon host needs Git and the `claude`, `codex`, or `omp` CLI on `PATH` or in `~/.local/bin`. The plugin downloads the release from [yannelli/be-concise](https://github.com/yannelli/be-concise/releases) into `~/.local/share/paseo-be-concise/releases` and registers it as the `be-concise` marketplace. Claude Code changes use user scope. Restart Claude Code sessions after a change. For Codex, start a new session and review the hooks with `/hooks`. omp copies the plugin into its own cache and loads the hooks at session start, so start a new omp session after a change. omp needs be-concise 0.12.0 or newer, and it does not check subagent replies. If the marketplace already uses another source, **Switch to GitHub releases** asks for confirmation before it points the marketplace at the release folder. Changes run in the background, and the tab shows the result when the host commands finish. See [be-concise installer](docs/plugin-installer.md) for the exact commands.
+Open **Be concise → Plugin**, or use the panel that appears when be-concise is missing. Choose a release and press **Install**, **Update**, or **Downgrade** for Claude Code, Codex, or omp. The daemon host needs Git and the `claude`, `codex`, or `omp` CLI on `PATH`, in `~/.local/bin`, or in `~/.bun/bin`. The plugin downloads the release from [yannelli/be-concise](https://github.com/yannelli/be-concise/releases) into `~/.local/share/paseo-be-concise/releases` and registers it as the `be-concise` marketplace. Claude Code changes use user scope. Restart Claude Code sessions after a change. For Codex, start a new session and review the hooks with `/hooks`. omp copies the plugin into its own cache and loads the hooks at session start, so start a new omp session after a change. omp needs be-concise 0.12.0 or newer, and it does not check subagent replies. If the marketplace already uses another source, **Switch to GitHub releases** asks for confirmation before it points the marketplace at the release folder. Changes run in the background, and the tab shows the result when the host commands finish. See [be-concise installer](docs/plugin-installer.md) for the exact commands.
 
 ## Activity and settings
 
@@ -127,7 +127,7 @@ Tests use Node.js 24 and temporary home/project directories. They cover activity
 
 Paseo API reference: [v0.9 plugins](https://paseo.sh/docs/plugins/v0.9/reference).
 
-See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, be-concise 0.10 to 0.12 support, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, add a configuration control, change install behavior, or change the release workflow.
+See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, be-concise 0.10 to 0.14 support, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, add a configuration control, change install behavior, or change the release workflow.
 
 ## Releases
 
