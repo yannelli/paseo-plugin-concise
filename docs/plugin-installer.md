@@ -42,6 +42,8 @@ Behavior checked on 2026-10-07 with omp 18.7.0 (a binary in `~/.local/bin`) and 
 - `omp plugin install` refuses a plugin that is already installed. With `--force` it installs the folder version, whether that version is higher, lower, or the same. `omp plugin upgrade` also moves to a lower version. The server uses `install --force` because the same command also reinstalls the same version.
 - omp copies the plugin to `<root>/plugins/cache/plugins/be-concise___concise___<version>` and links `<root>/plugins/node_modules/concise` to it. A version change replaces that folder. `omp plugin uninstall` deletes the folder, the link, and the entries in `installed_plugins.json` and `omp-plugins.lock.json`.
 
+On 2026-10-10 the Plugin tab ran install 0.14.0, update to 0.15.0, downgrade to 0.14.0, and remove for omp 18.8.4 on a separate Paseo 0.11.2 daemon with a temporary `HOME`. Each step gave the expected cache folder and `marketplaces.json` entry, and the adapter loaded be-concise from the omp cache.
+
 These points were not checked in a live omp session. They come from the be-concise [host-features.md](https://github.com/yannelli/be-concise/blob/v0.12.0/plugins/concise/docs/host-features.md#omp) at v0.12.0 and its maintainer notes. omp has no hook trust step. It loads the hooks as an extension at session start, so start a new omp session after a change. `/reload-plugins` does not load hooks.
 
 ## Existing installations

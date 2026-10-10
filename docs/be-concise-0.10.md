@@ -1,4 +1,4 @@
-# be-concise 0.10 to 0.14 support
+# be-concise 0.10 to 0.15 support
 
 Created: 2026-10-05. Last updated: 2026-10-09.
 
@@ -51,9 +51,9 @@ The tuner accepts pasted samples only: up to 20, each up to 64 KiB. It does not 
 
 The composer pill counts `deny`, `block`, `ask`, and `flag`, so injected rules do not raise it.
 
-## 0.10.1 to 0.14
+## 0.10.1 to 0.15
 
-Sources, read on 2026-10-07: the [v0.10.1](https://github.com/yannelli/be-concise/releases/tag/v0.10.1), [v0.11.0](https://github.com/yannelli/be-concise/releases/tag/v0.11.0), and [v0.12.0](https://github.com/yannelli/be-concise/releases/tag/v0.12.0) releases, the diff from v0.10.0 to v0.12.0, and [host-features.md](https://github.com/yannelli/be-concise/blob/v0.12.0/plugins/concise/docs/host-features.md#omp) at v0.12.0. The [v0.13.0](https://github.com/yannelli/be-concise/releases/tag/v0.13.0), [v0.13.1](https://github.com/yannelli/be-concise/releases/tag/v0.13.1), and [v0.14.0](https://github.com/yannelli/be-concise/releases/tag/v0.14.0) releases, the diff from v0.12.0 to v0.14.0, and [configuration.md](https://github.com/yannelli/be-concise/blob/v0.14.0/plugins/concise/docs/configuration.md) at v0.14.0 were read on 2026-10-09. Only 0.14.0 adds configuration keys.
+Sources, read on 2026-10-07: the [v0.10.1](https://github.com/yannelli/be-concise/releases/tag/v0.10.1), [v0.11.0](https://github.com/yannelli/be-concise/releases/tag/v0.11.0), and [v0.12.0](https://github.com/yannelli/be-concise/releases/tag/v0.12.0) releases, the diff from v0.10.0 to v0.12.0, and [host-features.md](https://github.com/yannelli/be-concise/blob/v0.12.0/plugins/concise/docs/host-features.md#omp) at v0.12.0. The [v0.13.0](https://github.com/yannelli/be-concise/releases/tag/v0.13.0), [v0.13.1](https://github.com/yannelli/be-concise/releases/tag/v0.13.1), and [v0.14.0](https://github.com/yannelli/be-concise/releases/tag/v0.14.0) releases, the diff from v0.12.0 to v0.14.0, and [configuration.md](https://github.com/yannelli/be-concise/blob/v0.14.0/plugins/concise/docs/configuration.md) at v0.14.0 were read on 2026-10-09. The [v0.15.0](https://github.com/yannelli/be-concise/releases/tag/v0.15.0) release and the diff from v0.14.0 were read on 2026-10-10. Only 0.14.0 adds configuration keys.
 
 | Change | Since | Plugin behavior |
 | --- | --- | --- |
@@ -64,6 +64,7 @@ Sources, read on 2026-10-07: the [v0.10.1](https://github.com/yannelli/be-concis
 | Claude 5.5 tell and hidden-character pattern packs | 0.13.0 | No change. Presets select the packs. |
 | `BEC_CONFIG_PATH` names a file that loads under the user and project files, in place of the project file. `BEC_CONFIG_PATH_ONLY` skips the user and project files. | 0.13.1 | The file appears first in the layer list as **BEC_CONFIG_PATH** (`env-config`). The quick enforcement toggle then writes the project file, which overrides it. Before 0.13.1 the layer is `project-override`, and the toggle stays unavailable. |
 | The `scan` switches, and hooks for notebooks, heredoc writes, shell writes, MCP posts, plans, tasks, and questions | 0.14.0 | **Scanned text** controls. Activity shows the new hook `check-tool-text` and `check-shell-writes` records. Their target is `notebook_path`, the task `subject`, the MCP post `title`, or the `plan`. |
+| `concise-web update`, which updates the console and runs the plugin update in each host that has the plugin | 0.15.0 | No change. The modules that the adapter loads are the same. For a host that reads a Paseo release folder, use the Plugin tab to change versions. |
 
 omp has no subagent stop event, so it does not check subagent replies. It reads the same `.claude/concise.json` and `.codex/concise.json` project files. The workspace enforcement toggle writes `.claude/concise.json` for omp agents, and the composer pill appears for the Paseo `omp` provider.
 

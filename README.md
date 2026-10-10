@@ -64,7 +64,7 @@ All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app in lig
 
 ## Install
 
-Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. Repository groups and hidden missing projects need 0.11.0. omp needs 0.12.0. The scan controls and the `code` dictionary scope need 0.14.0. Tested with be-concise 0.14.0. See [be-concise 0.10 to 0.14 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
+Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. Repository groups and hidden missing projects need 0.11.0. omp needs 0.12.0. The scan controls and the `code` dictionary scope need 0.14.0. Tested with be-concise 0.15.0. See [be-concise 0.10 to 0.15 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
 
 Install the npm release:
 
@@ -127,7 +127,7 @@ Tests use Node.js 24 and temporary home/project directories. They cover activity
 
 Paseo API reference: [v0.9 plugins](https://paseo.sh/docs/plugins/v0.9/reference).
 
-See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, be-concise 0.10 to 0.14 support, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, add a configuration control, change install behavior, or change the release workflow.
+See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, be-concise 0.10 to 0.15 support, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, add a configuration control, change install behavior, or change the release workflow.
 
 ## Releases
 
