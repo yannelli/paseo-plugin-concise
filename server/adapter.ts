@@ -9,7 +9,7 @@ import { compareVersions as compare } from "../shared/versions.ts";
 import { managedRoot } from "./installer.ts";
 
 type Environment = Record<string, string | undefined>;
-type Project = { key: string; name: string; cwd: string; lastSeen: string };
+type Project = { key: string; name: string; cwd: string; lastSeen: string; missing?: boolean; repo?: unknown };
 type Hub = { list(): Project[]; close(): void };
 type SaveInput = { cwd: string; id: string; text: string; revision: string | null };
 type PreviewInput = { cwd: string; kind: "Write" | "apply_patch" | "Bash" | "Stop"; text: string; path: string };
@@ -20,11 +20,15 @@ type ConfigurationModule = {
 };
 type Runner = { runTest(input: PreviewInput & { env: Environment; config: Record<string, unknown> }): Promise<unknown>; disposeTests(): Promise<void> };
 type Runtime = { root: string; version: string; config: ConfigurationModule; runner: Runner; hub: Hub };
-const MISSING = "Install be-concise 0.7.0 or newer for Claude or Codex on this host. For a source checkout, set PASEO_CONCISE_ROOT to its folder, then reload this plugin.";
+const MISSING = "Install be-concise 0.7.0 or newer for Claude Code or Codex, or 0.12.0 or newer for omp, on this host. For a source checkout, set PASEO_CONCISE_ROOT to its folder, then reload this plugin.";
 const BOOLEAN_FLAGS = new Set([
-  "BEC_HOOK_SOFT_FAIL", "BEC_DISABLE_STOP_HOOK", "BEC_MONITOR_PERSIST", "BEC_MONITOR_DISABLED",
+  "BEC_HOOK_SOFT_FAIL", "BEC_DISABLE_STOP_HOOK", "BEC_MONITOR_PERSIST", "BEC_MONITOR_DISABLED", "BEC_CONFIG_PATH_ONLY",
   "BEC_LOG_ENABLED", "BEC_LOG_USE_JSON", "BEC_LOG_USE_PLAINTEXT",
 ]);
+
+// be-concise 0.14.0 added the scan switches as feature ids.
+const FEATURE_IDS = new Set(["emDash", "aiWriting", "dictionary", "comments", "fileSize", "prBody", "stopHook",
+  "codeFiles", "notebooks", "heredocWrites", "shellWrites", "mcp", "plans", "tasks", "questions"]);
 
 export function visibleEnvironment(env: Environment): Record<string, string> {
   return Object.fromEntries(Object.entries(env).filter((entry): entry is [string, string] => {
@@ -32,7 +36,7 @@ export function visibleEnvironment(env: Environment): Record<string, string> {
     if (typeof value !== "string" || value.length > 200) return false;
     if (BOOLEAN_FLAGS.has(key)) return /^(1|0|true|false|yes|no|on|off)$/i.test(value.trim());
     if (["BEC_FEATURE_ENABLE", "BEC_FEATURE_DISABLE", "BEC_FEATURE_ALWAYS_ENABLE", "BEC_FEATURE_ALWAYS_DISABLE"].includes(key)) {
-      return value.split(",").every((id) => ["emDash", "aiWriting", "dictionary", "comments", "fileSize", "prBody", "stopHook"].includes(id.trim()));
+      return value.split(",").every((id) => FEATURE_IDS.has(id.trim()));
     }
     if (key === "BEC_LOG_MAX_SIZE") return /^\d+(?:\.\d+)?\s*[bkmg]?b?$/i.test(value.trim());
     if (key === "BEC_LOG_MAX_FILES") return /^\d+$/.test(value);
@@ -41,6 +45,20 @@ export function visibleEnvironment(env: Environment): Record<string, string> {
 }
 
 type Installation = { root: string; version: string };
+
+const listDirectory = (path: string) => readdir(path).catch(() => [] as string[]);
+
+// omp copies each installed version to <root>/plugins/cache/plugins/be-concise___concise___<version>.
+async function ompCaches(env: Environment, home: string): Promise<string[]> {
+  const base = join(home, ".omp");
+  const roots = [base, ...(await listDirectory(join(base, "profiles"))).map((name) => join(base, "profiles", name))];
+  if (env.XDG_DATA_HOME) roots.push(join(env.XDG_DATA_HOME, "omp"));
+  const caches = await Promise.all(roots.map(async (root) => {
+    const cache = join(root, "plugins/cache/plugins");
+    return (await listDirectory(cache)).filter((name) => name.startsWith("be-concise___concise___")).map((name) => join(cache, name));
+  }));
+  return caches.flat();
+}
 
 async function inspect(candidate: string): Promise<Installation | null> {
   for (const manifest of [".claude-plugin/plugin.json", ".codex-plugin/plugin.json", "plugin.json"]) {
@@ -64,12 +82,21 @@ export async function discoverInstallation(env: Environment): Promise<Installati
     const home = env.HOME || env.USERPROFILE || homedir();
     const caches = [join(env.CODEX_HOME || join(home, ".codex"), "plugins/cache/be-concise/concise"),
       join(env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "plugins/cache/be-concise/concise")];
-    await Promise.all(caches.map(async (cache) => {
-      try { candidates.push(...(await readdir(cache)).map((name) => join(cache, name))); } catch {}
-    }));
+    await Promise.all(caches.map(async (cache) => { candidates.push(...(await listDirectory(cache)).map((name) => join(cache, name))); }));
+    candidates.push(...await ompCaches(env, home));
   }
   const found = await Promise.all(candidates.map(inspect));
   return found.filter((value): value is Installation => value !== null).sort((a, b) => compare(b.version, a.version))[0] || null;
+}
+
+// be-concise 0.11.0 added missing and repo; older hubs omit both, so their projects count as present.
+function projectSummary(project: Project) {
+  const repo = project.repo && typeof project.repo === "object" ? project.repo as Record<string, unknown> : null;
+  const valid = repo && typeof repo.name === "string" && typeof repo.root === "string";
+  return {
+    key: project.key, name: String(project.name || "Project"), cwd: project.cwd, lastSeen: String(project.lastSeen || ""), missing: project.missing === true,
+    repo: project.repo === undefined ? undefined : valid ? { name: String(repo.name), root: String(repo.root), worktree: typeof repo.worktree === "string" ? repo.worktree : null, subdir: typeof repo.subdir === "string" ? repo.subdir : "" } : null,
+  };
 }
 
 async function target(cwd: string): Promise<string> {
@@ -161,7 +188,7 @@ export function createBackend(env: Environment = process.env) {
     return {
       connected: Boolean(active), version: active?.version || null, root: active?.root || null,
       message: active ? null : message || MISSING,
-      projects: active?.hub.list().map((project) => ({ ...project, name: String(project.name || "Project"), lastSeen: String(project.lastSeen || "") })) || [],
+      projects: active?.hub.list().map(projectSummary) || [],
       events, stats: activityStats(events), updatedAt: new Date().toISOString(), retainedLimit: RETAINED,
     };
   }

@@ -20,6 +20,7 @@ test("quick toggle creates a provider-specific project override without editing 
   const before = structuredClone(config);
   assert.deepEqual(enforcementUpdate(config, false, "codex"), { id: "project-codex", revision: null, text: '{\n  "softFail": true\n}\n' });
   assert.equal(enforcementUpdate(config, true, "claude").id, "project-claude");
+  assert.equal(enforcementUpdate(config, false, "omp").id, "project-claude");
   assert.deepEqual(config, before);
 });
 
@@ -30,6 +31,16 @@ test("quick toggle preserves the active layer, unrelated settings, and original 
   assert.equal(update.id, "project-claude");
   assert.equal(update.revision, "original");
   assert.deepEqual(JSON.parse(update.text), { maxCommentLines: 8, checks: { fileSize: false }, softFail: false });
+});
+
+test("quick toggle writes the project file over a 0.13.1 BEC_CONFIG_PATH layer", () => {
+  const config = state();
+  config.layers.unshift({ id: "env-config", label: "BEC_CONFIG_PATH", path: "/shared/concise.json", text: '{"softFail":false}', exists: true, active: true, revision: "env" });
+  assert.deepEqual(enforcementUpdate(config, false, "omp"), { id: "project-claude", revision: null, text: '{\n  "softFail": true\n}\n' });
+  config.environment = { BEC_CONFIG_PATH_ONLY: " Yes " };
+  assert.throws(() => enforcementUpdate(config, false, "omp"), /BEC_CONFIG_PATH_ONLY/);
+  config.environment = { BEC_CONFIG_PATH_ONLY: "0" };
+  assert.equal(enforcementUpdate(config, false, "omp").id, "project-claude");
 });
 
 test("quick toggle rejects malformed or redirected configuration", () => {

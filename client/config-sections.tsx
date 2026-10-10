@@ -5,7 +5,7 @@ import { Heading, Notice } from "./ui";
 
 export const PRESETS = ["default", "ryan", "technical", "ste", "minimal", "all", "git", "statistical"];
 const MODES = ["confirm", "ask", "deny"];
-const MODE_HINT = "confirm denies once and keeps an identical retry. ask uses the Claude permission prompt. deny blocks until the retry limit.";
+const MODE_HINT = "confirm denies once and keeps an identical retry. ask uses the Claude permission prompt or an omp confirm dialog. deny blocks until the retry limit.";
 const Group = ({ children }: { children: React.ReactNode }) => <View style={{ gap: 4, minWidth: 0 }}>{children}</View>;
 
 export function LimitsSection({ form }: { form: Form }) {
@@ -27,9 +27,20 @@ export function ChecksSection({ form }: { form: Form }) {
     <ToggleSetting form={form} path="checks.fileSize" label="File length" />
     <ToggleSetting form={form} path="checks.prBody" label="PR body length" />
     <ToggleSetting form={form} path="softFail" label="Soft fail" hint="Turns every deny, ask, and block into an allow with a notice." />
+    {supports(form, "scan.codeFiles") && <>
+      <Heading theme={form.theme} title="Scanned text" description="Places the style checks read beyond file writes and edits. Each switch stops the style checks there only." />
+      <ToggleSetting form={form} path="scan.codeFiles" label="Whole code files" hint="Runs code-scope packs and dictionary entries over whole code files, string literals included." />
+      <ToggleSetting form={form} path="scan.notebooks" label="Notebook cells" hint="Cells that NotebookEdit writes." />
+      <ToggleSetting form={form} path="scan.heredocWrites" label="Heredoc file writes" hint="Files that cat or tee writes from a heredoc, before the command runs." />
+      <ToggleSetting form={form} path="scan.shellWrites" label="Files shell commands change" hint="Lines a shell command added to files in a git work tree, after it runs." />
+      <ToggleSetting form={form} path="scan.mcp" label="MCP tool posts" hint="Text and files that MCP tools post or write." />
+      <ToggleSetting form={form} path="scan.plans" label="Plans" hint="The plan that ExitPlanMode shows for approval." />
+      <ToggleSetting form={form} path="scan.tasks" label="Tasks" hint="TaskCreate and TaskUpdate text." />
+      <ToggleSetting form={form} path="scan.questions" label="Questions to you" hint="AskUserQuestion questions and options." />
+    </>}
     <Heading theme={form.theme} title="Replies" description="Checks on the final reply and on subagent reports." />
     <ToggleSetting form={form} path="stopHook" label="Check final replies" />
-    <ToggleSetting form={form} path="subagentStop.enabled" label="Check subagent replies" hint="Also covers SubagentHandback reports in Claude Code auto mode." />
+    <ToggleSetting form={form} path="subagentStop.enabled" label="Check subagent replies" hint="Also covers SubagentHandback reports in Claude Code auto mode. omp has no subagent stop event, so it does not check them." />
     {stopOff && supports(form, "subagentStop.enabled") && <Notice theme={form.theme} tone="warning">Final reply checks are off, so subagent replies are not checked.</Notice>}
     <ListSetting form={form} path="subagentStop.exemptAgentTypes" label="Exempt agent types" merge="replace" placeholder="Explore" />
     {supports(form, "context.enabled") && <>
