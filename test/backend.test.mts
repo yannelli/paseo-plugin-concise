@@ -3,10 +3,10 @@ import { chmod, mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, writeFile
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
-import { ActivityStore, activityStats, normalizeEvent } from "./server/activity.ts";
-import { createBackend, discoverInstallation, visibleEnvironment } from "./server/adapter.ts";
-import { compareVersions } from "./shared/versions.ts";
-import { projectGroups, projectLabel, visibleProjects } from "./shared/projects.ts";
+import { ActivityStore, activityStats, normalizeEvent } from "../server/activity.ts";
+import { createBackend, discoverInstallation, visibleEnvironment } from "../server/adapter.ts";
+import { compareVersions } from "../shared/versions.ts";
+import { projectGroups, projectLabel, visibleProjects } from "../shared/projects.ts";
 
 const record = (extra: Record<string, unknown> = {}) => ({
   cwd: "/project", hook: "check-edit", ts: "2026-09-05T10:30:00.000Z", decision: "allow",
@@ -103,11 +103,11 @@ async function fixture(t: test.TestContext) {
   return { root, cwd, home, env: { HOME: home, USERPROFILE: home, PATH: process.env.PATH, PASEO_CONCISE_ROOT: join(root, "missing") } };
 }
 
-async function fakeInstallation(root: string, version = "0.7.0", projects: unknown[] = []) {
+async function fakeInstallation(root: string, version = "0.7.0", projects: unknown[] = [], records: unknown[] = []) {
   const files: Record<string, string> = {
     ".claude-plugin/plugin.json": JSON.stringify({ name: "concise", version }),
-    "web/configuration.mjs": "export function configuration() {}\nexport function saveConfiguration() {}\n",
-    "web/hub.mjs": `export function createHub() { return { list: () => ${JSON.stringify(projects)}, close() {} }; }\n`,
+    [compareVersions(version, "0.16.0") < 0 ? "web/configuration.mjs" : "tools/configuration.mjs"]: "export function configuration() {}\nexport function saveConfiguration() {}\n",
+    "web/hub.mjs": `export function createHub(env, { publish }) { ${JSON.stringify(records)}.forEach(publish); return { list: () => ${JSON.stringify(projects)}, close() {} }; }\n`,
     "web/testing/runner.mjs": "export async function runTest() {}\nexport async function disposeTests() {}\n",
   };
   for (const [path, content] of Object.entries(files)) {
@@ -140,6 +140,22 @@ test("discovery respects configured cache homes and rejects older installations"
   const found = await discoverInstallation({ HOME: home, CODEX_HOME: codex, CLAUDE_CONFIG_DIR: claude });
   assert.equal(found!.root, await realpath(current));
   assert.equal(found!.version, "0.7.1");
+});
+
+test("be-concise 0.16.0 and newer load configuration from tools", async (t) => {
+  const { root, env } = await fixture(t);
+  await fakeInstallation(join(root, "old"), "0.15.1");
+  await fakeInstallation(join(root, "new"), "0.16.4", [], [record({ decision: "deny" })]);
+  assert.equal((await discoverInstallation({ PASEO_CONCISE_ROOT: join(root, "old") }))!.configuration, "web/configuration.mjs");
+  assert.equal((await discoverInstallation({ PASEO_CONCISE_ROOT: join(root, "new") }))!.configuration, "tools/configuration.mjs");
+  const backend = createBackend({ ...env, PASEO_CONCISE_ROOT: join(root, "new") });
+  t.after(backend.close);
+  const snap = await backend.getSnapshot();
+  assert.equal(snap.connected, true);
+  assert.equal(snap.version, "0.16.4");
+  assert.equal(snap.events.length, 1);
+  const summary = await backend.getSnapshot({ summary: true });
+  assert.deepEqual([summary.events.length, summary.stats.total, summary.stats.decisions], [0, 1, [{ name: "deny", count: 1 }]]);
 });
 
 test("the newest managed release wins discovery and reset reloads the runtime", async (t) => {
@@ -362,6 +378,6 @@ test("from be-concise 0.13.1, BEC_CONFIG_PATH is its own layer under the user an
   t.after(backend.close);
   const state = await backend.getConfiguration({ cwd });
   assert.deepEqual(state.layers.filter(({ active }) => active).map(({ id }) => id), ["env-config", "project-claude"]);
-  assert.equal(state.layers[0].path, join(root, "shared.json"));
+  assert.equal(state.layers[0].path, join(await realpath(root), "shared.json"));
   assert.deepEqual([state.effective.maxCommentLines, state.effective.maxFileLines], [7, 200]);
 });

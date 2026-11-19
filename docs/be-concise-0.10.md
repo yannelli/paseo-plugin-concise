@@ -1,6 +1,6 @@
-# be-concise 0.10 to 0.15 support
+# be-concise 0.10 to 0.16 support
 
-Created: 2026-10-05. Last updated: 2026-10-09.
+Created: 2026-10-05. Last updated: 2026-11-19.
 
 This page lists the be-concise settings and tools that this plugin exposes, the oldest version that has each one, and the rules the controls follow. Sources, read on 2026-10-05: the [v0.10.0 release](https://github.com/yannelli/be-concise/releases/tag/v0.10.0), [configuration.md](https://github.com/yannelli/be-concise/blob/v0.10.0/plugins/concise/docs/configuration.md), and [tools.md](https://github.com/yannelli/be-concise/blob/v0.10.0/plugins/concise/docs/tools.md). Read them again before you change a control.
 
@@ -16,7 +16,7 @@ This page lists the be-concise settings and tools that this plugin exposes, the 
 | `dictionary` as a `BEC_FEATURE_*` id | 0.10.0 | Configuration → Effective configuration → Daemon environment |
 | `ignoreGlobs`, `styleIgnoreGlobs`, `allowList`, `bypass` | 0.7.0 | Configuration → Exceptions |
 | `features.aiWriting.allow`, `enablePatterns`, `disablePatterns` | 0.7.0 | Configuration → Style |
-| `log.*`, `monitor.persist` | 0.7.0 | Configuration → Logging |
+| `log.*`, `monitor.persist` | 0.7.0. `monitor.persist` is off by default from 0.16.4. | Configuration → Logging |
 | `scan.codeFiles`, `notebooks`, `heredocWrites`, `shellWrites`, `mcp`, `plans`, `tasks`, `questions` | 0.14.0 | Configuration → Checks → Scanned text |
 | The `code` scope on a dictionary entry | 0.14.0 | Configuration → Dictionary → Scopes, shown when `scan.codeFiles` exists |
 | The `scan` ids as `BEC_FEATURE_*` ids, and `BEC_CONFIG_PATH_ONLY` | 0.14.0, 0.13.1 | Configuration → Effective configuration → Daemon environment |
@@ -65,6 +65,15 @@ Sources, read on 2026-10-07: the [v0.10.1](https://github.com/yannelli/be-concis
 | `BEC_CONFIG_PATH` names a file that loads under the user and project files, in place of the project file. `BEC_CONFIG_PATH_ONLY` skips the user and project files. | 0.13.1 | The file appears first in the layer list as **BEC_CONFIG_PATH** (`env-config`). The quick enforcement toggle then writes the project file, which overrides it. Before 0.13.1 the layer is `project-override`, and the toggle stays unavailable. |
 | The `scan` switches, and hooks for notebooks, heredoc writes, shell writes, MCP posts, plans, tasks, and questions | 0.14.0 | **Scanned text** controls. Activity shows the new hook `check-tool-text` and `check-shell-writes` records. Their target is `notebook_path`, the task `subject`, the MCP post `title`, or the `plan`. |
 | `concise-web update`, which updates the console and runs the plugin update in each host that has the plugin | 0.15.0 | No change. The modules that the adapter loads are the same. For a host that reads a Paseo release folder, use the Plugin tab to change versions. |
+
+## 0.15.1 to 0.16
+
+Sources, read on 2026-11-19: the [v0.15.1](https://github.com/yannelli/be-concise/releases/tag/v0.15.1) to [v0.16.4](https://github.com/yannelli/be-concise/releases/tag/v0.16.4) releases, the diff from v0.15.0 to v0.16.4, and [PRIVACY.md](https://github.com/yannelli/be-concise/blob/v0.16.4/plugins/concise/PRIVACY.md) at v0.16.4. No release adds configuration keys.
+
+| Change | Since | Plugin behavior |
+| --- | --- | --- |
+| `web/configuration.mjs` moved to `tools/configuration.mjs`. Its exports are the same. | 0.16.0 | Discovery and the Plugin tab accept either path. Before this change, the plugin did not find a 0.16 install, and the Plugin tab failed to install a 0.16 release. |
+| `monitor.persist` defaults to `false`. Hooks append a record only when `monitor.persist` or `BEC_MONITOR_PERSIST` is on, or while a `concise-web --all` console registered in `~/.cache/concise/monitor/hub.json` runs. | 0.16.4 | Activity and the pill stay empty until you turn on **Persist activity** under Configuration → Logging. The pill popup says so when the effective value is `false`. The plugin does not write `hub.json`: that would turn recording on for every project while Paseo runs, and it would replace the entry of a running `concise-web --all` console. |
 
 omp has no subagent stop event, so it does not check subagent replies. It reads the same `.claude/concise.json` and `.codex/concise.json` project files. The workspace enforcement toggle writes `.claude/concise.json` for omp agents, and the composer pill appears for the Paseo `omp` provider.
 

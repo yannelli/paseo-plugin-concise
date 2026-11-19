@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { ActivityStore, activityStats, RETAINED } from "./activity.ts";
 import type { Configuration, TuneKind, TuneResult } from "../shared/contracts.ts";
 import { compareVersions as compare } from "../shared/versions.ts";
-import { managedRoot } from "./installer.ts";
+import { managedRoot, pluginModules } from "./installer.ts";
 
 type Environment = Record<string, string | undefined>;
 type Project = { key: string; name: string; cwd: string; lastSeen: string; missing?: boolean; repo?: unknown };
@@ -44,7 +44,7 @@ export function visibleEnvironment(env: Environment): Record<string, string> {
   }));
 }
 
-type Installation = { root: string; version: string };
+type Installation = { root: string; version: string; configuration: string };
 
 const listDirectory = (path: string) => readdir(path).catch(() => [] as string[]);
 
@@ -65,8 +65,8 @@ async function inspect(candidate: string): Promise<Installation | null> {
     try {
       const { name, version } = JSON.parse(await readFile(join(candidate, manifest), "utf8"));
       if (name !== "concise" || typeof version !== "string" || !/^v?\d+\.\d+\.\d+$/.test(version) || compare(version, "0.7.0") < 0) continue;
-      await Promise.all(["web/configuration.mjs", "web/hub.mjs", "web/testing/runner.mjs"].map((file) => stat(join(candidate, file))));
-      return { root: await realpath(candidate), version };
+      const { configuration } = await pluginModules(candidate);
+      return { root: await realpath(candidate), version, configuration };
     } catch {}
   }
   return null;
@@ -155,7 +155,7 @@ export function createBackend(env: Environment = process.env) {
       if (!installation) return null;
       const moduleAt = (file: string) => import(pathToFileURL(join(installation.root, file)).href);
       const [config, hubModule, runner] = await Promise.all([
-        moduleAt("web/configuration.mjs"), moduleAt("web/hub.mjs"), moduleAt("web/testing/runner.mjs"),
+        moduleAt(installation.configuration), moduleAt("web/hub.mjs"), moduleAt("web/testing/runner.mjs"),
       ]);
       if (typeof config.configuration !== "function" || typeof config.saveConfiguration !== "function" || typeof hubModule.createHub !== "function" || typeof runner.runTest !== "function" || typeof runner.disposeTests !== "function") {
         throw new Error("This be-concise installation does not provide the expected 0.7.0 APIs.");
@@ -179,7 +179,7 @@ export function createBackend(env: Environment = process.env) {
     return { ...state, environment: visibleEnvironment(state.environment) };
   }
 
-  async function getSnapshot({ cwd }: { cwd?: string } = {}) {
+  async function getSnapshot({ cwd, summary }: { cwd?: string; summary?: boolean } = {}) {
     const selected = cwd ? await target(cwd) : undefined;
     let message: string | null = null;
     let active: Runtime | null = null;
@@ -189,7 +189,7 @@ export function createBackend(env: Environment = process.env) {
       connected: Boolean(active), version: active?.version || null, root: active?.root || null,
       message: active ? null : message || MISSING,
       projects: active?.hub.list().map(projectSummary) || [],
-      events, stats: activityStats(events), updatedAt: new Date().toISOString(), retainedLimit: RETAINED,
+      events: summary ? [] : events, stats: activityStats(events), updatedAt: new Date().toISOString(), retainedLimit: RETAINED,
     };
   }
 

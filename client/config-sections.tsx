@@ -93,7 +93,7 @@ export function ExceptionsSection({ form }: { form: Form }) {
 export function LoggingSection({ form }: { form: Form }) {
   return <Group>
     <Heading theme={form.theme} title="Activity" />
-    <ToggleSetting form={form} path="monitor.persist" label="Persist activity" hint="Saves each hook request and response for this view and concise-web." />
+    <ToggleSetting form={form} path="monitor.persist" label="Persist activity" hint="Saves each hook request and response for this view and concise-web. be-concise 0.16.4 and newer turn it off by default." />
     <Heading theme={form.theme} title="Hook log" description="One record per hook call." />
     <ToggleSetting form={form} path="log.enabled" label="Write the hook log" />
     <TextSetting form={form} path="log.path" label="Log file" placeholder="~/.cache/concise/concise.log" />

@@ -1,6 +1,6 @@
 # be-concise installer
 
-Created: 2026-10-05. Last updated: 2026-10-09.
+Created: 2026-10-05. Last updated: 2026-11-19.
 
 The **Plugin** tab installs, updates, downgrades, and removes the `concise@be-concise` plugin for Claude Code, Codex, and omp (oh-my-pi) on the daemon host. It uses the [yannelli/be-concise GitHub releases](https://github.com/yannelli/be-concise/releases). The same view appears in the **Connect be-concise** state when no installation is found.
 
@@ -56,4 +56,4 @@ Paseo plugin RPCs time out after 60 seconds on the client. A change can take lon
 
 ## Adapter discovery
 
-`PASEO_CONCISE_ROOT` takes priority. Next comes the managed release that was changed most recently in `state.json`, and after that the highest version in the Claude, Codex, and omp caches. The omp caches are `plugins/cache/plugins/be-concise___concise___<version>` under `~/.omp`, each `~/.omp/profiles/<name>`, and `$XDG_DATA_HOME/omp`. After a successful change, the backend closes its runtime and loads the selected release on the next refresh. The status check also updates `state.json` when a host's marketplace no longer points at a managed release.
+A candidate needs `web/hub.mjs`, `web/testing/runner.mjs`, and a configuration module: `tools/configuration.mjs` from 0.16.0, `web/configuration.mjs` before it. The Plugin tab checks the same files in a downloaded release. `PASEO_CONCISE_ROOT` takes priority. Next comes the managed release that was changed most recently in `state.json`, and after that the highest version in the Claude, Codex, and omp caches. The omp caches are `plugins/cache/plugins/be-concise___concise___<version>` under `~/.omp`, each `~/.omp/profiles/<name>`, and `$XDG_DATA_HOME/omp`. After a successful change, the backend closes its runtime and loads the selected release on the next refresh. The status check also updates `state.json` when a host's marketplace no longer points at a managed release.

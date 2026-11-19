@@ -117,6 +117,18 @@ function parseJson(stdout: string): unknown {
   return null;
 }
 
+// be-concise 0.16.0 moved web/configuration.mjs to tools/configuration.mjs.
+const CONFIGURATION_MODULES = ["tools/configuration.mjs", "web/configuration.mjs"];
+
+/** Checks the hub and runner modules the adapter loads and returns the configuration module path. */
+export async function pluginModules(root: string): Promise<{ configuration: string }> {
+  await Promise.all(["web/hub.mjs", "web/testing/runner.mjs"].map((file) => stat(join(root, file))));
+  for (const file of CONFIGURATION_MODULES) {
+    if (await stat(join(root, file)).then((entry) => entry.isFile(), () => false)) return { configuration: file };
+  }
+  throw new Error(`be-concise at ${root} has no ${CONFIGURATION_MODULES.join(" or ")}.`);
+}
+
 async function validate(root: string, version: string) {
   const read = async (path: string): Promise<JsonObject> => {
     const value: unknown = JSON.parse(await readFile(join(root, path), "utf8"));
@@ -127,7 +139,7 @@ async function validate(root: string, version: string) {
   ]);
   if (claude.name !== MARKETPLACE || codex.name !== MARKETPLACE) throw new Error("The release does not contain the be-concise marketplace.");
   if (plugin.name !== "concise" || plugin.version !== version) throw new Error(`The release plugin version ${text(plugin.version) || "is missing and"} does not match ${version}.`);
-  await Promise.all(["web/configuration.mjs", "web/hub.mjs", "web/testing/runner.mjs"].map((file) => stat(join(root, "plugins/concise", file))));
+  await pluginModules(join(root, "plugins/concise"));
 }
 
 export function createInstaller({ env = process.env, run = runCommand, fetchJson = fetch as FetchJson, onChange = async () => {}, now = Date.now }: {

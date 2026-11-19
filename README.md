@@ -2,7 +2,7 @@
 
 # Be concise for Paseo
 
-A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code, Codex, and omp (oh-my-pi). Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The composer pill shows the rejected and flagged total when enforcement is on and **Off** when disabled. Open it for decision details and the workspace enforcement toggle.
+A native companion to [be-concise](https://github.com/yannelli/be-concise) for Claude Code, Codex, and omp (oh-my-pi). Open **Be concise** in Paseo's sidebar, workspace panels, or Command Center. The sidebar row shows the rejected and flagged total across projects. The composer pill shows the rejected and flagged total when enforcement is on and **Off** when disabled. Open it for decision details and the workspace enforcement toggle.
 
 - Live hook decisions, searchable by tool, file, session, project, and reason. The project picker groups projects by repository and hides projects whose folder is gone. Pause the feed or open an event’s request and response.
 - A compact composer pill with the Be concise logo and one number. The number combines rejected and flagged decisions; the popup shows each decision count and a 30-minute chart. Turning enforcement off displays **Off** and sets the workspace's `softFail` override; flagged actions are allowed while hooks and test-output filtering remain active. Turn it on to restore enforcement. Agent environment overrides apply separately.
@@ -64,7 +64,7 @@ All images are 1920×1080. They come from the Paseo 0.11.0-beta.3 web app in lig
 
 ## Install
 
-Requires Paseo 0.9.0 or newer (tested against the 0.10.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. Repository groups and hidden missing projects need 0.11.0. omp needs 0.12.0. The scan controls and the `code` dictionary scope need 0.14.0. Tested with be-concise 0.15.0. See [be-concise 0.10 to 0.15 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
+Requires Paseo 0.13.0 or newer (typechecked against the 0.16.2 plugin SDK) and be-concise 0.7.0 or newer on the daemon machine. The adapter uses the configuration, monitoring, and preview APIs shipped with be-concise 0.7.0. The dictionary and the writing tuner need be-concise 0.10.0; controls for settings that the installed version lacks are hidden. Repository groups and hidden missing projects need 0.11.0. omp needs 0.12.0. The scan controls and the `code` dictionary scope need 0.14.0. be-concise 0.16.0 moved its configuration module, and this plugin reads both locations. Tested with be-concise 0.15.0 and 0.16.4. See [be-concise 0.10 to 0.16 support](docs/be-concise-0.10.md). Paseo supplies all runtime dependencies.
 
 Install the npm release:
 
@@ -81,14 +81,15 @@ The plugin detects installed be-concise versions in the Claude, Codex, and omp c
 
 ### Older Paseo versions
 
-Paseo installs npm sources from 0.9.0. On older Paseo, install the Git tag built for that version:
+Paseo installs npm sources from 0.9.0. On older Paseo, install the version built for it:
 
-| Paseo | Plugin tag | Command |
+| Paseo | Plugin version | Command |
 | --- | --- | --- |
+| 0.9.0 to 0.12.x | `2.5.0` | `paseo plugin add npm:@yannelli/paseo-be-concise@2.5.0` |
 | 0.8.0 | `v1.0.0` | `paseo plugin add yannelli/paseo-plugin-concise --ref v1.0.0` |
 | 0.7.2 | `v0.2.9` | `paseo plugin add yannelli/paseo-plugin-concise --ref v0.2.9` |
 
-These tags do not have later features, such as the Plugin tab and the be-concise 0.10 controls. On Paseo 0.9.0 or newer, `--ref` also installs a 2.x tag that is not on npm, for example `--ref v2.2.0`. See [npm publishing](docs/npm-publishing.md#paseo-versions) for the sources.
+These versions do not have later features. Version 2.5.0 does not find be-concise 0.16.0 or newer, and the Git tags lack the Plugin tab and the be-concise 0.10 controls. On Paseo 0.9.0 or newer, `--ref` also installs a 2.x tag that is not on npm, for example `--ref v2.2.0`. See [npm publishing](docs/npm-publishing.md#paseo-versions) for the sources.
 
 ### Local development
 
@@ -107,7 +108,7 @@ Open **Be concise → Plugin**, or use the panel that appears when be-concise is
 
 ## Activity and settings
 
-The view refreshes every two seconds. It follows the project registry and saved records under the daemon’s HOME/XDG directories, alongside any running `concise-web` console. It retains up to 500 events per project within a shared 16 MiB budget. Stats describe that retained window; they are not lifetime totals. New activity requires `monitor.persist` to be enabled and `BEC_MONITOR_DISABLED` to be unset in the agent’s environment.
+The view refreshes every two seconds. It follows the project registry and saved records under the daemon’s HOME/XDG directories, alongside any running `concise-web` console. It retains up to 500 events per project within a shared 16 MiB budget. Stats describe that retained window; they are not lifetime totals. New activity requires `monitor.persist` to be enabled and `BEC_MONITOR_DISABLED` to be unset in the agent’s environment. be-concise 0.16.4 and newer turn `monitor.persist` off by default. Turn on **Persist activity** under Configuration → Logging.
 
 Configuration controls edit the selected file and preserve its other keys. **Save changes** validates through be-concise and checks the file revision. An intervening edit preserves your draft and requires an explicit reload. The effective view uses the daemon’s environment; agent-specific environment overrides apply separately. The interface labels active and inactive layers because creating a higher-priority file changes which configuration is selected.
 
@@ -125,9 +126,9 @@ paseo plugin logs paseo-be-concise
 
 Tests use Node.js 24 and temporary home/project directories. They cover activity normalization, retention, stats, installation discovery, config conflicts, file permissions, preview isolation, form and dictionary edits, the tuner, omp records, and the omp installer commands. Integration tests require an installed be-concise; the tuner and dictionary tests need 0.10.0. Set `PASEO_CONCISE_ROOT` to a checkout to select it explicitly.
 
-Paseo API reference: [v0.9 plugins](https://paseo.sh/docs/plugins/v0.9/reference).
+`npm run typecheck` checks the client with `tsconfig.json` and the server with `tsconfig.server.json`. Paseo API reference: [plugins](https://paseo.sh/docs/plugins/reference).
 
-See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, be-concise 0.10 to 0.15 support, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, add a configuration control, change install behavior, or change the release workflow.
+See the [documentation index](docs/INDEX.md) for the current composer button contract, screenshot capture details, be-concise 0.10 to 0.16 support, the Paseo plugin APIs in use, the be-concise installer commands, and npm publishing. Consult it when you change pill labels, update screenshots, add a configuration control, change a Paseo contribution or the Paseo requirement, change install behavior, or change the release workflow.
 
 ## Releases
 

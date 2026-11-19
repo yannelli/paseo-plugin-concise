@@ -28,8 +28,8 @@ async function createHarness(directory: string | undefined = "/project") {
   let updated = () => {};
   const exports = {} as { contributeComposer(client: PluginClientContext): () => void };
   const componentImports = new Set([
-    "react/jsx-runtime", "@getpaseo/plugin/client", "@getpaseo/plugin/client/react-native",
-    "@tanstack/react-query", "react", "react-native", "../shared/enforcement", "./brand", "./ui",
+    "react/jsx-runtime", "@getpaseo/plugin/client", "@getpaseo/plugin/client/ui",
+    "@tanstack/react-query", "react", "react-native", "../shared/enforcement", "./brand", "./config-form", "./ui",
   ]);
   runInNewContext(compiled, {
     exports, AbortController, console,

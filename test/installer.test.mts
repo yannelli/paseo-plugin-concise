@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import test from "node:test";
 import { createInstaller, managedRoot, ompRoot, readState, type ApplyInput, type FetchJson, type Run, type RunResult } from "../server/installer.ts";
+import { compareVersions } from "../shared/versions.ts";
 
 type FakeHost = { version: string | null; source: string | null; enabled?: boolean };
 const release = (tag: string, extra: Record<string, unknown> = {}) => ({ tag_name: tag, name: tag, published_at: "2026-09-29T21:58:29Z", html_url: `https://github.com/yannelli/be-concise/releases/tag/${tag}`, ...extra });
@@ -24,7 +25,8 @@ async function writeRelease(root: string, version: string) {
     ".claude-plugin/marketplace.json": JSON.stringify({ name: "be-concise" }),
     ".agents/plugins/marketplace.json": JSON.stringify({ name: "be-concise" }),
     "plugins/concise/.claude-plugin/plugin.json": JSON.stringify({ name: "concise", version }),
-    "plugins/concise/web/configuration.mjs": "", "plugins/concise/web/hub.mjs": "", "plugins/concise/web/testing/runner.mjs": "",
+    [`plugins/concise/${compareVersions(version, "0.16.0") < 0 ? "web" : "tools"}/configuration.mjs`]: "",
+    "plugins/concise/web/hub.mjs": "", "plugins/concise/web/testing/runner.mjs": "",
   };
   for (const [path, content] of Object.entries(files)) {
     await mkdir(dirname(join(root, path)), { recursive: true });
@@ -175,6 +177,14 @@ test("install stages each release once, updates, downgrades, and prunes releases
   assert.ok(changes() >= 4);
 });
 
+test("a be-concise 0.16 release with tools/configuration.mjs installs", async (t) => {
+  const { installer, releases } = await fixture(t, { releases: [release("v0.16.4"), release("v0.15.1")] });
+  const result = await settle(installer, { host: "codex", action: "install" });
+  assert.equal(result.error, null);
+  assert.match(result.message, /Installed be-concise 0\.16\.4 for Codex/);
+  await stat(join(releases, "v0.16.4/plugins/concise/tools/configuration.mjs"));
+});
+
 test("an existing marketplace source requires an explicit switch and reports the previous source", async (t) => {
   const external = "/home/user/.codex/.tmp/marketplaces/be-concise";
   const { calls, installer, releases, state } = await fixture(t, { hosts: { codex: { version: "0.8.2", source: external } } });
@@ -183,7 +193,7 @@ test("an existing marketplace source requires an explicit switch and reports the
   const result = await settle(installer, { host: "codex", action: "install", version: "0.8.2", switchSource: true });
   assert.match(result.message, /Reinstalled be-concise 0\.8\.2 for Codex\. Start a new Codex session.*\/hooks\. Previous marketplace source: \/home\/user\/\.codex/);
   assert.deepEqual(mutations(calls, "codex"), ["plugin marketplace remove be-concise", `plugin marketplace add ${join(releases, "v0.8.2")}`, "plugin add concise@be-concise"]);
-  assert.equal(state.codex.source, join(releases, "v0.8.2"));
+  assert.equal(state.codex.source, await realpath(join(releases, "v0.8.2")));
 });
 
 test("a failed switch restores the earlier marketplace source", async (t) => {

@@ -1,6 +1,6 @@
-import { type PluginSurfaceProps, type PluginWorkspacePanelProps, useRpc, useWorkspace } from "@getpaseo/plugin/client";
+import { type PluginScreenProps, type PluginTab, type PluginWorkspacePanelProps, useRpc, useWorkspace } from "@getpaseo/plugin/client";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { snapshot } from "../shared/contracts";
 import { projectGroups, projectLabel, visibleProjects } from "../shared/projects";
@@ -11,19 +11,19 @@ import { Installer } from "./installer";
 import { Playground } from "./playground";
 import { Button, Card, Chips, Label, Row } from "./ui";
 
-type Props = Pick<PluginSurfaceProps, "theme" | "layout"> & { cwd?: string };
+type Props = Pick<PluginScreenProps, "theme" | "layout"> & { cwd?: string; panelTab?: PluginTab };
 
-export function MainSurface(props: PluginSurfaceProps) {
-  return <Dashboard {...props} />;
+export function MainScreen({ theme, layout }: PluginScreenProps) {
+  return <Dashboard theme={theme} layout={layout} />;
 }
 
 export function WorkspacePanel(props: PluginWorkspacePanelProps) {
   const directory = useWorkspace(props.workspaceId, (workspace) => workspace.directory);
   if (!directory) return <View style={{ padding: 20, backgroundColor: props.theme.colors.surface0 }}><Label theme={props.theme}>Loading workspace…</Label></View>;
-  return <Dashboard key={directory} {...props} cwd={directory} />;
+  return <Dashboard key={directory} theme={props.theme} layout={props.layout} panelTab={props.tab} cwd={directory} />;
 }
 
-function Dashboard({ theme, layout, cwd }: Props) {
+function Dashboard({ theme, layout, cwd, panelTab }: Props) {
   const fetchSnapshot = useRpc(snapshot);
   const [selected, setSelected] = useState(cwd ?? "");
   const [tab, setTab] = useState("activity");
@@ -44,6 +44,7 @@ function Dashboard({ theme, layout, cwd }: Props) {
   const choose = (value: string) => { setSelected(value); setPaused(null); setProjectsOpen(false); };
   const open = (value: string) => { setTab(value); setVisited((current) => current.includes(value) ? current : [...current, value]); };
   const unsaved = hasUnsaved(drafts, selected);
+  useEffect(() => { panelTab?.setModified(unsaved); }, [panelTab, unsaved]);
   const shown = (value: string) => ({ display: tab === value ? "flex" as const : "none" as const });
 
   return <ScrollView onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
@@ -100,7 +101,7 @@ function Dashboard({ theme, layout, cwd }: Props) {
       {tab === "plugin" && <Installer theme={theme} compact={compact} />}
       <View style={{ borderTopWidth: 1, borderColor: theme.colors.border, paddingTop: 10, gap: 3 }}>
         <Label theme={theme} muted size={11}>be-concise {data.version} · Updated {new Date(data.updatedAt).toLocaleTimeString()}</Label>
-        <Label theme={theme} muted size={11}>Last {data.retainedLimit} records per project · Requires monitor.persist in each agent.</Label>
+        <Label theme={theme} muted size={11}>Last {data.retainedLimit} records per project · Hooks record activity only with Persist activity on (Configuration → Logging). be-concise 0.16.4 and newer turn it off by default.</Label>
       </View>
     </>}
   </ScrollView>;
