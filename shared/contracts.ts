@@ -33,7 +33,8 @@ export const StatsSchema = z.object({
 });
 export type ActivityStats = z.infer<typeof StatsSchema>;
 export const snapshot = defineRpc({
-  name: "concise.snapshot", input: z.object({ cwd: z.string().optional() }),
+  // summary leaves out events; stats still cover the whole retained window.
+  name: "concise.snapshot", input: z.object({ cwd: z.string().optional(), summary: z.boolean().optional() }),
   output: z.object({
     connected: z.boolean(), version: z.string().nullable(), root: z.string().nullable(),
     message: z.string().nullable(), projects: z.array(ProjectSchema), events: z.array(EventSchema),

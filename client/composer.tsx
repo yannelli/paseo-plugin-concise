@@ -8,13 +8,14 @@ import {
   useRpc,
   useWorkspace,
 } from "@getpaseo/plugin/client";
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, Text, View, type ViewStyle } from "react-native";
 import { readConfiguration, snapshot, writeConfiguration } from "../shared/contracts";
 import { enforcementUpdate } from "../shared/enforcement";
 import { BrandIcon } from "./brand";
+import { at } from "./config-form";
 import { Label, ToggleIndicator } from "./ui";
 
 const PILL_ID = "concise";
@@ -48,12 +49,15 @@ function decisionCounts(decisions: { name: string; count: number }[]) {
     .filter((item, index) => index < 2 || item.count > 0);
 }
 
+export const attentionTotal = (decisions: { name: string; count: number }[]) =>
+  decisionCounts(decisions).filter((item) => item.decision === "deny" || item.decision === "flag").reduce((sum, item) => sum + item.count, 0);
+
 function ConciseIcon({ theme, size, color }: PluginButtonIconProps) {
   return <BrandIcon theme={theme} size={size} monochrome color={color} />;
 }
 
 function pillStatus(state: "Connecting" | "Enabled" | "Bypassed" | "Unavailable", decisions: { name: string; count: number }[] = []) {
-  const attention = decisionCounts(decisions).filter((item) => item.decision === "deny" || item.decision === "flag").reduce((sum, item) => sum + item.count, 0);
+  const attention = attentionTotal(decisions);
   const labels = { Connecting: "…", Enabled: String(attention), Bypassed: "Off", Unavailable: "!" };
   const summaries = { Connecting: "Connecting", Enabled: `${attention} rejected or flagged`, Bypassed: "Enforcement off", Unavailable: "Unavailable" };
   return { label: labels[state], icon: ConciseIcon, title: `Be concise · ${summaries[state]}` };
@@ -75,6 +79,7 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
   const activity = useQuery({ queryKey: ["concise", "snapshot", cwd], queryFn: () => fetchSnapshot({ cwd: cwd! }), enabled: Boolean(cwd), refetchInterval: 3000, retry: 1 });
   const config = useQuery({ queryKey: ["concise", "configuration", cwd], queryFn: () => read({ cwd: cwd! }), enabled: Boolean(cwd), refetchInterval: 3000, retry: 1 });
   const bypassed = config.data?.effective.softFail === true;
+  const unrecorded = at(config.data?.effective, "monitor.persist") === false;
   const failed = activity.isError || config.isError;
   const ready = activity.data?.connected && Boolean(config.data) && !failed;
   const counts = decisionCounts(activity.data?.stats.decisions ?? []);
@@ -137,6 +142,7 @@ function ConciseAgentContent({ theme, workspaceId, agentId, onOpenDetails }: Ext
           <Label theme={theme} muted size={10}>Now</Label>
         </View>
         {!minutes.some((minute) => minute.count > 0) && <Label theme={theme} muted size={11}>No recent activity</Label>}
+        {unrecorded && <Label theme={theme} muted size={11}>Persist activity is off, so hooks do not save decisions here. Turn it on in Configuration → Logging.</Label>}
       </View>}
       {problem && <Label theme={theme} size={12}>{problem}</Label>}
       {!!notice && <Label theme={theme} size={12}>{notice}</Label>}
@@ -203,7 +209,7 @@ export function contributeComposer(client: PluginClientContext) {
       try {
         const cwd = workspace.directory ?? (await workspace.refresh())?.workspaceDirectory;
         if (!cwd) { update(pillStatus("Connecting")); return; }
-        const [snap, config] = await Promise.all([client.rpc(snapshot, { cwd }), client.rpc(readConfiguration, { cwd })]);
+        const [snap, config] = await Promise.all([client.rpc(snapshot, { cwd, summary: true }), client.rpc(readConfiguration, { cwd })]);
         const bypassed = config.effective.softFail === true;
         update(pillStatus(!snap.connected ? "Connecting" : bypassed ? "Bypassed" : "Enabled", snap.stats.decisions));
       } catch {

@@ -1,5 +1,6 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc } from "@getpaseo/plugin/client";
+import { useToast } from "@getpaseo/plugin/client/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
@@ -33,14 +34,18 @@ export function Installer({ theme, compact }: { theme: PluginTheme; compact: boo
   const refresh = useMutation({ mutationFn: () => read({ refresh: true }), onSuccess: (data) => cache.setQueryData(queryKey, data) });
   const mutation = useMutation({ mutationFn: apply, onSuccess: (data) => { cache.setQueryData(queryKey, data); setConfirming(null); } });
   const job = query.data?.job ?? null;
+  const toast = useToast();
   const running = useRef(false);
   useEffect(() => {
     if (running.current && !job?.running) {
       void cache.invalidateQueries({ queryKey: ["concise", "snapshot"] });
+      void cache.invalidateQueries({ queryKey: ["concise", "summary"] });
       void cache.invalidateQueries({ queryKey: ["concise", "configuration"] });
+      if (job?.error) toast.error(job.error);
+      else if (job?.message) toast.show(job.message, { variant: "success" });
     }
     running.current = Boolean(job?.running);
-  }, [cache, job?.running]);
+  }, [cache, job, toast]);
   if (query.isPending) return <Label theme={theme} muted>Reading be-concise releases and hosts…</Label>;
   if (!query.data) return <Card theme={theme}><Label theme={theme}>{query.error?.message ?? "Release status is unavailable."}</Label><Button theme={theme} label="Retry" onPress={() => { void query.refetch(); }} /></Card>;
   const { releases, hosts } = query.data;

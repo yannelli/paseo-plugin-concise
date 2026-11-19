@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "index.server.ts",
+    "server/**/*.ts",
+    "shared/**/*.ts"
+  ]
+}

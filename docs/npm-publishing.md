@@ -1,6 +1,6 @@
 # npm publishing
 
-Created: 2026-10-05. Last updated: 2026-10-05.
+Created: 2026-10-05. Last updated: 2026-11-19.
 
 The **Release** workflow publishes `@yannelli/paseo-be-concise` to [npm](https://www.npmjs.com/package/@yannelli/paseo-be-concise) after the GitHub release step. Paseo installs it with:
 
@@ -8,7 +8,7 @@ The **Release** workflow publishes `@yannelli/paseo-be-concise` to [npm](https:/
 paseo plugin add npm:@yannelli/paseo-be-concise
 ```
 
-Paseo runs `npm install --omit=dev --ignore-scripts` on the daemon host and compiles `index.client.tsx` and `index.server.ts` itself. The tarball holds TypeScript source only, listed in `files` in `package.json`. Paseo resolves plugin modules only under `client/`, `server/`, and `shared/`. Run `npm pack --dry-run` to check the file list after you add a top-level file.
+Paseo runs `npm install --omit=dev --ignore-scripts` on the daemon host and compiles `index.client.tsx` and `index.server.ts` itself. The tarball holds `OVERVIEW.md` and TypeScript source, listed in `files` in `package.json`. Paseo resolves plugin modules only under `client/`, `server/`, and `shared/`. Run `npm pack --dry-run` to check the file list after you add a top-level file.
 
 ## Paseo versions
 
@@ -19,7 +19,8 @@ Paseo added npm plugin sources, including versions, tags, and ranges, in [0.9.0]
 | `v0.2.9` | none | Paseo 0.7.2 |
 | `v1.0.0` | `paseo >=0.8.0` | Paseo 0.8.0 |
 | `v2.0.0` | `paseo >=0.9.0-beta.2` | Paseo 0.9.0-beta.2 or newer |
-| `v2.0.1` to `v2.3.0` | `paseo >=0.9.0` | Paseo 0.9.0 or newer |
+| `v2.0.1` to `v2.5.0` | `paseo >=0.9.0` | Paseo 0.9.0 or newer |
+| `v3.0.0` and later | `paseo >=0.13.0` | Paseo 0.13.0 or newer |
 
 npm has 2.3.0 and later. Earlier 2.x versions install from their Git tags.
 

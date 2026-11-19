@@ -1,6 +1,6 @@
 import type { PluginTheme } from "@getpaseo/plugin";
 import { useRpc } from "@getpaseo/plugin/client";
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
@@ -97,7 +97,7 @@ export function Activity({ theme, compact, events, stats, paused, onPause }: {
       <View style={{ borderColor: theme.colors.border, borderWidth: 1, borderRadius: 8, overflow: "hidden", minWidth: 0 }}>
         {visible.length ? visible.slice(0, limit).map((event) => <EventRow key={event.id} event={event} theme={theme} compact={compact} />) :
           <View style={{ padding: 12, gap: 4 }}><Label theme={theme}>{events.length ? "No matching events" : "Waiting for the next hook"}</Label>
-            <Label theme={theme} muted size={12}>{events.length ? "Try another decision or search term." : "Use Claude Code, Codex, or omp with be-concise enabled to see saved hook decisions."}</Label></View>}
+            <Label theme={theme} muted size={12}>{events.length ? "Try another decision or search term." : "Turn on Persist activity in Configuration → Logging. Then use Claude Code, Codex, or omp with be-concise enabled."}</Label></View>}
       </View>
       {visible.length > limit && <Button theme={theme} label="Show more events" onPress={() => setLimit(limit + 60)} />}
     </View>
